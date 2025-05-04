@@ -14,12 +14,18 @@
 90
 A0
 
-// Repeated access pattern to test cache hits
-10
-20
-30
-40
-50
+// Repeated access to test L1 cache hits (same addresses multiple times)
+10  // Should be a hit if still in L1
+10  // Definitely a hit
+10  // Definitely a hit
+20  // Should be a hit if still in L1
+20  // Definitely a hit
+30  // Should be a hit if still in L1
+30  // Definitely a hit
+40  // Should be a hit if still in L1
+40  // Definitely a hit
+50  // Should be a hit if still in L1
+50  // Definitely a hit
 
 // Stride access pattern (stride of 32 bytes - maps to same L1 cache index)
 10
@@ -31,6 +37,16 @@ B0
 D0
 F0
 
+// Now repeat the stride access to test L1 cache hits
+10  // Should be a hit
+30  // Should be a hit
+50  // Should be a hit
+70  // Should be a hit
+90  // Should be a hit
+B0  // Should be a hit
+D0  // Should be a hit
+F0  // Should be a hit
+
 // Random access pattern
 25
 A7
@@ -41,33 +57,49 @@ D9
 34
 7C
 
-// Loop pattern (repeated small section)
+// Repeat random accesses to test hits
+25  // Should be a hit
+A7  // Should be a hit
+F3  // Should be a hit
+64  // Should be a hit
+B1  // Should be a hit
+D9  // Should be a hit
+34  // Should be a hit
+7C  // Should be a hit
+
+// Loop pattern (tight loop with repeated accesses should have high hit rate)
 100
 110
 120
-100
-110
-120
-100
-110
-120
-100
-110
-120
+100  // Should be a hit
+110  // Should be a hit
+120  // Should be a hit
+100  // Should be a hit
+110  // Should be a hit
+120  // Should be a hit
+100  // Should be a hit
+110  // Should be a hit
+120  // Should be a hit
+100  // Should be a hit
+110  // Should be a hit
+120  // Should be a hit
 
 // Interleaved access pattern
 200
 300
 400
-200
-300
-400
-200
-300
-400
-200
-300
-400
+200  // Should be a hit
+300  // Should be a hit
+400  // Should be a hit
+200  // Should be a hit
+300  // Should be a hit
+400  // Should be a hit
+200  // Should be a hit
+300  // Should be a hit
+400  // Should be a hit
+200  // Should be a hit
+300  // Should be a hit
+400  // Should be a hit
 
 // Sequential pattern to fill cache
 500
@@ -106,7 +138,7 @@ D9
 6F0
 
 // Large stride pattern (jumps over large areas)
-10
+10  // Should be a hit from earlier
 110
 210
 310
@@ -114,22 +146,22 @@ D9
 510
 610
 710
-10
-110
-210
-310
-410
-510
-610
-710
+10  // Should be a hit
+110  // Should be a hit
+210  // Should be a hit
+310  // Should be a hit
+410  // Should be a hit
+510  // Should be a hit
+610  // Should be a hit
+710  // Should be a hit
 
 // Sequential pattern overlapping with earlier addressed regions
-20
+20  // Should be a hit from earlier
 21
 22
 23
 24
-25
+25  // Should be a hit from earlier
 26
 27
 28

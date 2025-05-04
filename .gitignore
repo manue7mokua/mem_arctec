@@ -1,0 +1,18 @@
+# Compiled Verilog files
+cache_sim
+*.vcd
+
+# Result files
+results_*.txt
+waveform_*.vcd
+
+# Temporary files
+.cursor/
+
+# Editor-specific files
+*.swp
+*~
+
+# OS-specific files
+.DS_Store
+Thumbs.db 

@@ -1,75 +1,149 @@
 # Two-Level Cache Hierarchy Simulation
 
-This project implements a two-level memory cache system in Verilog, simulating how memory access is handled in a hierarchical cache model. The goal is to evaluate the performance of various cache mapping techniques.
+This project implements a Verilog simulation of a two-level memory cache hierarchy with configurable mapping strategies and replacement policies.
 
-## System Description
+## Cache Specifications
 
-- **CPU Address Space**: 11-bit address (total addressable memory = 2048 bytes)
+- **L1 Cache**: 256 bytes with 16-byte blocks
+- **L2 Cache**: 512 bytes with 32-byte blocks
 - **Main Memory**: 2048 bytes
-- **Level 1 (L1) Cache**:
-  - Size: 256 bytes
-  - Block size: 16 bytes
-- **Level 2 (L2) Cache**:
-  - Size: 512 bytes
-  - Block size: 32 bytes
 
-## Cache Implementations
+## Features
 
-1. **Direct-Mapped Cache** (Implemented)
-2. **2-Way Set Associative Cache** (Planned)
-3. **4-Way Set Associative Cache** (Planned)
+- **Configurable Mapping Strategies**:
 
-## Performance Metrics
+  - Direct-Mapped
+  - 2-Way Set Associative
+  - 4-Way Set Associative
 
-The simulation measures:
+- **Replacement Policies**:
 
-- Hit/Miss ratio for L1 and L2
-- Access time simulation (L1: 1 cycle, L2: 10 cycles, Main memory: 100 cycles)
-- Total average memory access time (AMAT)
+  - LRU (Least Recently Used)
+  - Random
 
-## How to Run the Simulation
+- **Performance Tracking**:
 
-### Prerequisites
+  - L1 and L2 hit/miss counts
+  - Hit rates
+  - Average Memory Access Time (AMAT) calculation
 
-- [Icarus Verilog](https://iverilog.icarus.com/) for compilation and simulation
-- Use [vc.drom.io](https://vc.drom.io/) for viewing waveforms
+- **Access Latencies**:
+  - L1 Cache: 1 cycle
+  - L2 Cache: 10 cycles
+  - Main Memory: 100 cycles
 
-### Running the Simulation
+## Project Structure
 
-1. Compile and run the simulation:
+- `src/`
 
-   ```
-   make
-   ```
+  - `cache_config.v`: Configuration parameters for the cache hierarchy
+  - `l1_cache.v`: L1 cache implementation
+  - `l2_cache.v`: L2 cache implementation
+  - `main_memory.v`: Main memory implementation
+  - `cpu.v`: CPU module that loads memory traces
+  - `top.v`: Top-level module connecting all components
 
-2. View the results in the console output, which will show:
+- `test/`
+  - `testbench.v`: Testbench to run and evaluate the simulation
+  - `test_trace.txt`: Memory access trace file
 
-   - Memory access patterns
-   - Cache hits and misses
-   - Performance statistics including hit rates and AMAT
+## How to Run
 
-3. View the waveform (optional):
-   - upload `output.vcd` to [vc.drom.io](https://vc.drom.io/) for online viewing.
+1. Compile the Verilog files:
 
-## Test Trace
+```
+iverilog -o cache_sim test/testbench.v src/*.v
+```
 
-The simulation uses a test trace file (`test/test_trace.txt`) that contains a sequence of memory addresses to access. The trace includes various patterns:
+2. Run the simulation:
+
+```
+vvp cache_sim
+```
+
+3. View waveforms (if needed):
+
+```
+gtkwave output.vcd
+```
+
+Or upload the VCD file to [vc.drom.io](https://vc.drom.io/) for viewing in a browser.
+
+## Customizing Cache Configuration
+
+You can customize the cache configuration by modifying `src/cache_config.v` or by passing compiler defines:
+
+```
+# Direct-mapped caches
+iverilog -DCACHE_MAPPING_L1=0 -DCACHE_MAPPING_L2=0 -o cache_sim test/testbench.v src/*.v
+
+# 2-way set associative with LRU
+iverilog -DCACHE_MAPPING_L1=1 -DCACHE_MAPPING_L2=1 -DREPLACEMENT_POLICY_L1=0 -DREPLACEMENT_POLICY_L2=0 -o cache_sim test/testbench.v src/*.v
+
+# 4-way set associative with Random replacement
+iverilog -DCACHE_MAPPING_L1=2 -DCACHE_MAPPING_L2=2 -DREPLACEMENT_POLICY_L1=1 -DREPLACEMENT_POLICY_L2=1 -o cache_sim test/testbench.v src/*.v
+
+# Mix and match different configurations for L1 and L2
+iverilog -DCACHE_MAPPING_L1=1 -DCACHE_MAPPING_L2=2 -DREPLACEMENT_POLICY_L1=0 -DREPLACEMENT_POLICY_L2=1 -o cache_sim test/testbench.v src/*.v
+```
+
+## Interpreting Results
+
+The simulation provides detailed performance metrics:
+
+- **Hit/Miss Counters**: Raw count of cache hits and misses at each level
+- **Hit Rates**: Percentage of accesses that resulted in a hit
+- **AMAT (Average Memory Access Time)**: Calculated based on the formula:
+  - AMAT = L1 access time + L1 miss rate _ (L2 access time + L2 miss rate _ Memory access time)
+
+The simulation also includes detailed console output showing:
+
+- Each memory access with address, hit/miss status
+- Data promotion between cache levels
+- Replacement decisions in associative caches
+
+## Testing Different Access Patterns
+
+The `test_trace.txt` file contains various memory access patterns to evaluate cache performance:
 
 - Sequential access
 - Repeated access
 - Stride access
 - Random access
 - Loop patterns
+- Interleaved access
 
-## Project Structure
+You can customize this file to test your own access patterns.
 
-- `src/` - Source code for the cache hierarchy
-  - `cpu.v` - CPU model that reads addresses from the trace file
-  - `l1_cache.v` - L1 cache implementation
-  - `l2_cache.v` - L2 cache implementation
-  - `main_memory.v` - Main memory implementation
-  - `top.v` - Top-level module connecting all components
-- `test/` - Test files
-  - `test_trace.txt` - Memory address trace file
-  - `testbench.v` - Testbench for simulation
-- `Makefile` - Build automation
+## Implementation Details
+
+### Address Bit Partitioning
+
+- For an 11-bit address (0-2047), the bits are divided into:
+  - Tag: Most significant bits
+  - Index: Middle bits that determine the cache set
+  - Offset: Least significant bits that determine the byte within a block
+
+The exact bit partitioning is calculated dynamically based on the cache configuration.
+
+### Data Promotion
+
+- When there's an L1 miss but L2 hit, data is promoted from L2 to L1
+- When there's both an L1 and L2 miss, data is fetched from main memory and placed in both caches
+
+### Cache Replacement
+
+- In direct-mapped caches, the block is simply overwritten
+- In set associative caches, replacement is based on the configured policy:
+  - LRU: Replaces the least recently used block in the set
+  - Random: Replaces a random block in the set
+
+## Performance Comparison
+
+Running the simulation with different configurations allows comparison of:
+
+- Different mapping strategies (direct-mapped vs. set associative)
+- Different replacement policies (LRU vs. Random)
+- Different associativity levels (2-way vs. 4-way)
+
+The most efficient configuration depends on the memory access pattern.
