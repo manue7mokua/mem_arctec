@@ -1,6 +1,16 @@
 // Cache Configuration File
 // Contains parameters and macros for the two-level cache hierarchy
 
+// Debug macro to print configuration
+`define DEBUG_CONFIG \
+initial begin \
+  $display("CACHE CONFIG DEBUG:"); \
+  $display("L1 Cache Mapping Type: %0d", `CACHE_MAPPING_L1); \
+  $display("L2 Cache Mapping Type: %0d", `CACHE_MAPPING_L2); \
+  $display("L1 Replacement Policy: %0d", `REPLACEMENT_POLICY_L1); \
+  $display("L2 Replacement Policy: %0d", `REPLACEMENT_POLICY_L2); \
+end
+
 // Cache Sizes (in bytes)
 `define L1_CACHE_SIZE 256  // 256 bytes
 `define L2_CACHE_SIZE 512  // 512 bytes
@@ -16,16 +26,28 @@
 `define FOUR_WAY 2
 
 // Default mapping types for each cache level
-`define CACHE_MAPPING_L1 `DIRECT_MAPPED
-`define CACHE_MAPPING_L2 `DIRECT_MAPPED
+// These will be overridden by command line if provided
+`ifndef CACHE_MAPPING_L1
+  `define CACHE_MAPPING_L1 `DIRECT_MAPPED
+`endif
+
+`ifndef CACHE_MAPPING_L2
+  `define CACHE_MAPPING_L2 `DIRECT_MAPPED
+`endif
 
 // Replacement Policies
 `define LRU 0  // Least Recently Used
 `define RANDOM 1  // Random replacement
 
 // Default replacement policies for each cache level
-`define REPLACEMENT_POLICY_L1 `LRU
-`define REPLACEMENT_POLICY_L2 `LRU
+// These will be overridden by command line if provided
+`ifndef REPLACEMENT_POLICY_L1
+  `define REPLACEMENT_POLICY_L1 `LRU
+`endif
+
+`ifndef REPLACEMENT_POLICY_L2
+  `define REPLACEMENT_POLICY_L2 `LRU
+`endif
 
 // Access Latencies (in clock cycles)
 `define L1_LATENCY 1

@@ -46,27 +46,55 @@ module testbench;
     $dumpfile("output.vcd");
     $dumpvars(0, testbench);
     
-    // Display test configuration
     $display("\n*************************************************************");
     $display("* CACHE HIERARCHY SIMULATION - CONFIGURATION *");
     $display("*************************************************************");
-    $display("L1 Cache: %s with %s replacement", 
-             config_names[`CACHE_MAPPING_L1], 
-             (`CACHE_MAPPING_L1 != `DIRECT_MAPPED) ? replacement_names[`REPLACEMENT_POLICY_L1] : "N/A");
-    $display("L2 Cache: %s with %s replacement", 
-             config_names[`CACHE_MAPPING_L2], 
-             (`CACHE_MAPPING_L2 != `DIRECT_MAPPED) ? replacement_names[`REPLACEMENT_POLICY_L2] : "N/A");
+    
+    if (`CACHE_MAPPING_L1 == `DIRECT_MAPPED) begin
+      $display("L1 Cache: DIRECT MAPPED");
+    end else if (`CACHE_MAPPING_L1 == `TWO_WAY) begin
+      if (`REPLACEMENT_POLICY_L1 == `LRU) begin
+        $display("L1 Cache: 2-WAY SET ASSOCIATIVE with LRU replacement");
+      end else begin
+        $display("L1 Cache: 2-WAY SET ASSOCIATIVE with RANDOM replacement");
+      end
+    end else if (`CACHE_MAPPING_L1 == `FOUR_WAY) begin
+      if (`REPLACEMENT_POLICY_L1 == `LRU) begin
+        $display("L1 Cache: 4-WAY SET ASSOCIATIVE with LRU replacement");
+      end else begin
+        $display("L1 Cache: 4-WAY SET ASSOCIATIVE with RANDOM replacement");
+      end
+    end else begin
+      $display("L1 Cache: UNKNOWN CONFIGURATION");
+    end
+    
+    if (`CACHE_MAPPING_L2 == `DIRECT_MAPPED) begin
+      $display("L2 Cache: DIRECT MAPPED");
+    end else if (`CACHE_MAPPING_L2 == `TWO_WAY) begin
+      if (`REPLACEMENT_POLICY_L2 == `LRU) begin
+        $display("L2 Cache: 2-WAY SET ASSOCIATIVE with LRU replacement");
+      end else begin
+        $display("L2 Cache: 2-WAY SET ASSOCIATIVE with RANDOM replacement");
+      end
+    end else if (`CACHE_MAPPING_L2 == `FOUR_WAY) begin
+      if (`REPLACEMENT_POLICY_L2 == `LRU) begin
+        $display("L2 Cache: 4-WAY SET ASSOCIATIVE with LRU replacement");
+      end else begin
+        $display("L2 Cache: 4-WAY SET ASSOCIATIVE with RANDOM replacement");
+      end
+    end else begin
+      $display("L2 Cache: UNKNOWN CONFIGURATION");
+    end
+    
     $display("L1 Size: %d bytes, Block size: %d bytes", `L1_CACHE_SIZE, `L1_BLOCK_SIZE);
     $display("L2 Size: %d bytes, Block size: %d bytes", `L2_CACHE_SIZE, `L2_BLOCK_SIZE);
     $display("*************************************************************\n");
     
-    $display("Simulation starting...");
-    $display("Time | Address | L1 Hit | L2 Hit");
+    $display("Simulation starting with 10,000 addresses...");
     
-    // Run for enough cycles to process more trace entries
-    #1000;
+    // Run simulation for enough cycles to process all addresses
+    #1000000;
     
-    // Display final statistics
     $display("\n*************************************************************");
     $display("* FINAL PERFORMANCE STATISTICS *");
     $display("*************************************************************");
@@ -85,8 +113,7 @@ module testbench;
       $display("L2 Hit Rate: %.2f%%", hit_rate_l2_real * 100.0);
     end
     
-    // Calculate and display AMAT
-    amat = 1.0;  // L1 access time
+    amat = 1.0;
     if (l1_hit_count + l1_miss_count > 0) begin
       amat = amat + (l1_miss_count * 1.0 / (l1_hit_count + l1_miss_count)) * 
              (10.0 + (l2_miss_count * 1.0 / l1_miss_count) * 100.0);
@@ -97,8 +124,23 @@ module testbench;
     $finish;
   end
 
+  integer progress_counter = 0;
+  parameter REPORT_INTERVAL = 1000;
+  
   always @(posedge clk) begin
-    $display("%4t | %h |   %b   |   %b", $time, address, hit_l1, hit_l2);
+    progress_counter = progress_counter + 1;
+    if (progress_counter % REPORT_INTERVAL == 0) begin
+      $display("Processed %d addresses", progress_counter);
+      if (l1_hit_count + l1_miss_count > 0) begin
+        hit_rate_l1 = (l1_hit_count * 100) / (l1_hit_count + l1_miss_count);
+        hit_rate_l1_real = hit_rate_l1 / 100.0;
+        $display("Current L1 Hit Rate: %.2f%%", hit_rate_l1_real * 100.0);
+      end
+      if (l1_miss_count > 0) begin
+        hit_rate_l2 = (l2_hit_count * 100) / l1_miss_count;
+        hit_rate_l2_real = hit_rate_l2 / 100.0;
+        $display("Current L2 Hit Rate: %.2f%%", hit_rate_l2_real * 100.0);
+      end
+    end
   end
-
 endmodule

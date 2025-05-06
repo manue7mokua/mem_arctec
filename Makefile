@@ -64,6 +64,30 @@ mixed: $(SRC_FILES)
 	@cp output.vcd waveform_mixed.vcd
 	@echo "Waveform saved to waveform_mixed.vcd"
 
+large_trace: $(SRC_FILES)
+	@echo "Compiling Direct-Mapped configuration with large trace (10,000 addresses)..."
+	$(IVERILOG) $(IVERILOG_FLAGS) $(SIM_OUT) $(INC_PATH) -DCACHE_MAPPING_L1=0 -DCACHE_MAPPING_L2=0 $(SRC_FILES)
+	@echo "Running simulation with 10,000 addresses..."
+	$(VVP) $(SIM_OUT)
+	@cp output.vcd waveform_large_trace.vcd
+	@echo "Waveform saved to waveform_large_trace.vcd"
+
+simple_trace: $(SRC_FILES)
+	@echo "Compiling Direct-Mapped configuration with simple trace (10,000 addresses)..."
+	$(IVERILOG) $(IVERILOG_FLAGS) $(SIM_OUT) $(INC_PATH) -DCACHE_MAPPING_L1=0 -DCACHE_MAPPING_L2=0 $(SRC_FILES)
+	@echo "Running simulation with simple trace (10,000 addresses)..."
+	$(VVP) $(SIM_OUT)
+	@cp output.vcd waveform_simple_trace.vcd
+	@echo "Waveform saved to waveform_simple_trace.vcd"
+
+embedded_trace: $(SRC_FILES)
+	@echo "Compiling Direct-Mapped configuration with embedded trace..."
+	$(IVERILOG) $(IVERILOG_FLAGS) $(SIM_OUT) $(INC_PATH) -DCACHE_MAPPING_L1=0 -DCACHE_MAPPING_L2=0 $(SRC_FILES)
+	@echo "Running simulation with embedded trace..."
+	$(VVP) $(SIM_OUT)
+	@cp output.vcd waveform_embedded_trace.vcd
+	@echo "Waveform saved to waveform_embedded_trace.vcd"
+
 # Run all configurations and compare results
 compare: $(SRC_FILES)
 	@echo "Running all cache configurations for comparison..."
@@ -121,4 +145,73 @@ view_waveform:
 clean:
 	rm -f $(SIM_OUT) output.vcd results_*.txt waveform_*.vcd
 
-.PHONY: all direct_mapped two_way_lru two_way_random four_way_lru four_way_random mixed compare view_waveform clean 
+# Run all configurations with the large trace file (10,000 addresses)
+large_compare: $(SRC_FILES)
+	@echo "Running all cache configurations with large trace (10,000 addresses)..."
+	
+	@echo "Compiling and running Direct-Mapped configuration..."
+	@$(IVERILOG) $(IVERILOG_FLAGS) $(SIM_OUT) $(INC_PATH) -DCACHE_MAPPING_L1=0 -DCACHE_MAPPING_L2=0 $(SRC_FILES)
+	@$(VVP) $(SIM_OUT) > results_large_direct_mapped.txt
+	@cp output.vcd waveform_large_direct_mapped.vcd
+	
+	@echo "Compiling and running 2-Way Set Associative with LRU configuration..."
+	@$(IVERILOG) $(IVERILOG_FLAGS) $(SIM_OUT) $(INC_PATH) -DCACHE_MAPPING_L1=1 -DCACHE_MAPPING_L2=1 -DREPLACEMENT_POLICY_L1=0 -DREPLACEMENT_POLICY_L2=0 $(SRC_FILES)
+	@$(VVP) $(SIM_OUT) > results_large_two_way_lru.txt
+	@cp output.vcd waveform_large_two_way_lru.vcd
+	
+	@echo "Compiling and running 2-Way Set Associative with Random configuration..."
+	@$(IVERILOG) $(IVERILOG_FLAGS) $(SIM_OUT) $(INC_PATH) -DCACHE_MAPPING_L1=1 -DCACHE_MAPPING_L2=1 -DREPLACEMENT_POLICY_L1=1 -DREPLACEMENT_POLICY_L2=1 $(SRC_FILES)
+	@$(VVP) $(SIM_OUT) > results_large_two_way_random.txt
+	@cp output.vcd waveform_large_two_way_random.vcd
+	
+	@echo "Compiling and running 4-Way Set Associative with LRU configuration..."
+	@$(IVERILOG) $(IVERILOG_FLAGS) $(SIM_OUT) $(INC_PATH) -DCACHE_MAPPING_L1=2 -DCACHE_MAPPING_L2=2 -DREPLACEMENT_POLICY_L1=0 -DREPLACEMENT_POLICY_L2=0 $(SRC_FILES)
+	@$(VVP) $(SIM_OUT) > results_large_four_way_lru.txt
+	@cp output.vcd waveform_large_four_way_lru.vcd
+	
+	@echo "Compiling and running 4-Way Set Associative with Random configuration..."
+	@$(IVERILOG) $(IVERILOG_FLAGS) $(SIM_OUT) $(INC_PATH) -DCACHE_MAPPING_L1=2 -DCACHE_MAPPING_L2=2 -DREPLACEMENT_POLICY_L1=1 -DREPLACEMENT_POLICY_L2=1 $(SRC_FILES)
+	@$(VVP) $(SIM_OUT) > results_large_four_way_random.txt
+	@cp output.vcd waveform_large_four_way_random.vcd
+	
+	@echo "Compiling and running Mixed configuration (L1: 2-Way LRU, L2: 4-Way Random)..."
+	@$(IVERILOG) $(IVERILOG_FLAGS) $(SIM_OUT) $(INC_PATH) -DCACHE_MAPPING_L1=1 -DCACHE_MAPPING_L2=2 -DREPLACEMENT_POLICY_L1=0 -DREPLACEMENT_POLICY_L2=1 $(SRC_FILES)
+	@$(VVP) $(SIM_OUT) > results_large_mixed.txt
+	@cp output.vcd waveform_large_mixed.vcd
+	
+	@echo "All configurations have been tested with large trace."
+	@echo "------------------------------------------------------------"
+	@echo "SUMMARY OF FINAL RESULTS (LARGE TRACE):"
+	@echo "------------------------------------------------------------"
+	@echo "DIRECT MAPPED:"
+	@grep "L1 Hit Rate" results_large_direct_mapped.txt | tail -1
+	@grep "L2 Hit Rate" results_large_direct_mapped.txt | tail -1
+	@grep "AMAT" results_large_direct_mapped.txt | tail -1
+	@echo "------------------------------------------------------------"
+	@echo "2-WAY SET ASSOCIATIVE WITH LRU:"
+	@grep "L1 Hit Rate" results_large_two_way_lru.txt | tail -1
+	@grep "L2 Hit Rate" results_large_two_way_lru.txt | tail -1
+	@grep "AMAT" results_large_two_way_lru.txt | tail -1
+	@echo "------------------------------------------------------------"
+	@echo "2-WAY SET ASSOCIATIVE WITH RANDOM:"
+	@grep "L1 Hit Rate" results_large_two_way_random.txt | tail -1
+	@grep "L2 Hit Rate" results_large_two_way_random.txt | tail -1
+	@grep "AMAT" results_large_two_way_random.txt | tail -1
+	@echo "------------------------------------------------------------"
+	@echo "4-WAY SET ASSOCIATIVE WITH LRU:"
+	@grep "L1 Hit Rate" results_large_four_way_lru.txt | tail -1
+	@grep "L2 Hit Rate" results_large_four_way_lru.txt | tail -1
+	@grep "AMAT" results_large_four_way_lru.txt | tail -1
+	@echo "------------------------------------------------------------"
+	@echo "4-WAY SET ASSOCIATIVE WITH RANDOM:"
+	@grep "L1 Hit Rate" results_large_four_way_random.txt | tail -1
+	@grep "L2 Hit Rate" results_large_four_way_random.txt | tail -1
+	@grep "AMAT" results_large_four_way_random.txt | tail -1
+	@echo "------------------------------------------------------------"
+	@echo "MIXED CONFIGURATION (L1: 2-WAY LRU, L2: 4-WAY RANDOM):"
+	@grep "L1 Hit Rate" results_large_mixed.txt | tail -1
+	@grep "L2 Hit Rate" results_large_mixed.txt | tail -1
+	@grep "AMAT" results_large_mixed.txt | tail -1
+	@echo "------------------------------------------------------------"
+
+.PHONY: all direct_mapped two_way_lru two_way_random four_way_lru four_way_random mixed compare view_waveform clean large_trace large_compare simple_trace embedded_trace 

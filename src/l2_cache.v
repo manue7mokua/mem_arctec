@@ -1,12 +1,23 @@
 module l2_cache(input clk, input [10:0] address, input l1_miss, output reg hit, output reg miss, output reg [31:0] data_out,
   input promote_data, input [31:0] promotion_data);
-  // Use a simpler include path that will work with the -I flag
+  
+  // Include constants and macros from config
   `include "src/cache_config.v"
   
+  // Cache parameters - potentially overridden in instantiation
   parameter CACHE_SIZE = `L2_CACHE_SIZE;
   parameter BLOCK_SIZE = `L2_BLOCK_SIZE;
   parameter MAPPING_TYPE = `CACHE_MAPPING_L2;
   parameter REPLACEMENT_POLICY = `REPLACEMENT_POLICY_L2;
+  
+  // Debug configuration parameters for this module
+  initial begin
+    $display("L2 Cache Configuration Debug:");
+    $display("  CACHE_SIZE = %0d", CACHE_SIZE);
+    $display("  BLOCK_SIZE = %0d", BLOCK_SIZE);
+    $display("  MAPPING_TYPE = %0d", MAPPING_TYPE);
+    $display("  REPLACEMENT_POLICY = %0d", REPLACEMENT_POLICY);
+  end
   
   // Calculate the number of ways based on the mapping type
   localparam WAYS = (MAPPING_TYPE == `DIRECT_MAPPED) ? 1 :

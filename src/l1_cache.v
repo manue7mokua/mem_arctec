@@ -1,12 +1,23 @@
 module l1_cache(input clk, input [10:0] address, output reg hit, output reg miss, output reg [31:0] data_out, 
   input promote_data, input [31:0] promotion_data);
-  // Use a simpler include path that will work with the -I flag
+  
+  // Include constants and macros from config
   `include "src/cache_config.v" 
   
+  // Cache parameters - potentially overridden in instantiation
   parameter CACHE_SIZE = `L1_CACHE_SIZE;
   parameter BLOCK_SIZE = `L1_BLOCK_SIZE;
   parameter MAPPING_TYPE = `CACHE_MAPPING_L1;
   parameter REPLACEMENT_POLICY = `REPLACEMENT_POLICY_L1;
+  
+  // Debug configuration parameters for this module
+  initial begin
+    $display("L1 Cache Configuration Debug:");
+    $display("  CACHE_SIZE = %0d", CACHE_SIZE);
+    $display("  BLOCK_SIZE = %0d", BLOCK_SIZE);
+    $display("  MAPPING_TYPE = %0d", MAPPING_TYPE);
+    $display("  REPLACEMENT_POLICY = %0d", REPLACEMENT_POLICY);
+  end
   
   // Calculate the number of ways based on the mapping type
   localparam WAYS = (MAPPING_TYPE == `DIRECT_MAPPED) ? 1 :
@@ -20,6 +31,16 @@ module l1_cache(input clk, input [10:0] address, output reg hit, output reg miss
   localparam OFFSET_BITS = `COMPUTE_OFFSET_BITS(BLOCK_SIZE);
   localparam INDEX_BITS = `COMPUTE_INDEX_BITS(NUM_SETS);
   localparam TAG_BITS = `COMPUTE_TAG_BITS(11, INDEX_BITS, OFFSET_BITS);
+  
+  // Print calculated values
+  initial begin
+    $display("L1 Cache Calculated Values:");
+    $display("  WAYS = %0d", WAYS);
+    $display("  NUM_SETS = %0d", NUM_SETS);
+    $display("  OFFSET_BITS = %0d", OFFSET_BITS);
+    $display("  INDEX_BITS = %0d", INDEX_BITS);
+    $display("  TAG_BITS = %0d", TAG_BITS);
+  end
   
   // Extract address components
   wire [OFFSET_BITS-1:0] block_offset = address[OFFSET_BITS-1:0];
