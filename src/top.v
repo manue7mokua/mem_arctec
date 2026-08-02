@@ -1,4 +1,4 @@
-module top(input clk, output [10:0] address, output hit_l1, output hit_l2, output [31:0] performance_counter_l1_hit, output [31:0] performance_counter_l1_miss, output [31:0] performance_counter_l2_hit, output [31:0] performance_counter_l2_miss);
+module top(input clk, output [10:0] address, output hit_l1, output hit_l2, output [31:0] performance_counter_l1_hit, output [31:0] performance_counter_l1_miss, output [31:0] performance_counter_l2_hit, output [31:0] performance_counter_l2_miss, output [31:0] performance_counter_writeback);
 
   // Use a simpler include path that will work with the -I flag
   `include "src/cache_config.v"
@@ -8,6 +8,7 @@ module top(input clk, output [10:0] address, output hit_l1, output hit_l2, outpu
   wire cpu_request_valid;
   wire [31:0] data_l1, data_l2, data_mem;
   wire miss_l1, miss_l2;
+  wire dirty_eviction_l1, dirty_eviction_l2;
   
   // Print configuration debug info
   `DEBUG_CONFIG
@@ -23,6 +24,7 @@ module top(input clk, output [10:0] address, output hit_l1, output hit_l2, outpu
   reg [31:0] l2_hit_count = 0;
   reg [31:0] l2_miss_count = 0;
   reg [31:0] mem_access_count = 0;
+  reg [31:0] writeback_count = 0;
   
   // Delay registers to maintain correct temporal ordering
   reg [10:0] last_address;
@@ -46,9 +48,11 @@ module top(input clk, output [10:0] address, output hit_l1, output hit_l2, outpu
   ) l1_cache_inst (
     .clk(clk),
     .address(cpu_address),
+    .is_write(cpu_is_write),
     .hit(hit_l1),
     .miss(miss_l1),
     .data_out(data_l1),
+    .dirty_eviction(dirty_eviction_l1),
     .promote_data(promote_l1_data),
     .promotion_data(promotion_l1_data)
   );
@@ -63,9 +67,11 @@ module top(input clk, output [10:0] address, output hit_l1, output hit_l2, outpu
     .clk(clk),
     .address(cpu_address),
     .l1_miss(miss_l1),
+    .is_write(cpu_is_write),
     .hit(hit_l2),
     .miss(miss_l2),
     .data_out(data_l2),
+    .dirty_eviction(dirty_eviction_l2),
     .promote_data(promote_l2_data),
     .promotion_data(promotion_l2_data)
   );
@@ -86,6 +92,7 @@ module top(input clk, output [10:0] address, output hit_l1, output hit_l2, outpu
   assign performance_counter_l1_miss = l1_miss_count;
   assign performance_counter_l2_hit = l2_hit_count;
   assign performance_counter_l2_miss = l2_miss_count;
+  assign performance_counter_writeback = writeback_count;
   
   // Handle L1 and L2 cache hits/misses and update performance counters
   always @(posedge clk) begin
@@ -94,6 +101,9 @@ module top(input clk, output [10:0] address, output hit_l1, output hit_l2, outpu
     // Reset promotion signals by default
     promote_l1_data <= 0;
     promote_l2_data <= 0;
+    if (dirty_eviction_l1 || dirty_eviction_l2) begin
+      writeback_count <= writeback_count + dirty_eviction_l1 + dirty_eviction_l2;
+    end
     
     // First, check for L1 hit/miss and update counters
     if (hit_l1) begin

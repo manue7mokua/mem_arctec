@@ -5,7 +5,7 @@ module testbench;
   reg clk = 0;
   wire [10:0] address;
   wire hit_l1, hit_l2;
-  wire [31:0] l1_hit_count, l1_miss_count, l2_hit_count, l2_miss_count;
+  wire [31:0] l1_hit_count, l1_miss_count, l2_hit_count, l2_miss_count, writeback_count;
   integer hit_rate_l1, hit_rate_l2;
   real hit_rate_l1_real, hit_rate_l2_real, amat;
 
@@ -37,7 +37,8 @@ module testbench;
     .performance_counter_l1_hit(l1_hit_count),
     .performance_counter_l1_miss(l1_miss_count),
     .performance_counter_l2_hit(l2_hit_count),
-    .performance_counter_l2_miss(l2_miss_count)
+    .performance_counter_l2_miss(l2_miss_count),
+    .performance_counter_writeback(writeback_count)
   );
 
   always #5 clk = ~clk;
@@ -100,6 +101,7 @@ module testbench;
     $display("*************************************************************");
     $display("L1 Hits: %d, L1 Misses: %d", l1_hit_count, l1_miss_count);
     $display("L2 Hits: %d, L2 Misses: %d", l2_hit_count, l2_miss_count);
+    $display("Dirty Writebacks: %d", writeback_count);
     
     if (l1_hit_count + l1_miss_count > 0) begin
       hit_rate_l1 = (l1_hit_count * 100) / (l1_hit_count + l1_miss_count);

@@ -1,5 +1,5 @@
-module l2_cache(input clk, input [10:0] address, input l1_miss, output reg hit, output reg miss, output reg [31:0] data_out,
-  input promote_data, input [31:0] promotion_data);
+module l2_cache(input clk, input [10:0] address, input l1_miss, input is_write, output reg hit, output reg miss, output reg [31:0] data_out,
+  output reg dirty_eviction, input promote_data, input [31:0] promotion_data);
   
   // Include constants and macros from config
   `include "src/cache_config.v"
@@ -39,6 +39,7 @@ module l2_cache(input clk, input [10:0] address, input l1_miss, output reg hit, 
   
   // Cache storage
   reg valid[NUM_SETS-1:0][WAYS-1:0];
+  reg dirty[NUM_SETS-1:0][WAYS-1:0];
   reg [TAG_BITS-1:0] tags[NUM_SETS-1:0][WAYS-1:0];
   reg [31:0] data[NUM_SETS-1:0][WAYS-1:0];
   
@@ -56,11 +57,13 @@ module l2_cache(input clk, input [10:0] address, input l1_miss, output reg hit, 
     for (i = 0; i < NUM_SETS; i = i + 1) begin
       for (j = 0; j < WAYS; j = j + 1) begin
         valid[i][j] = 0;
+        dirty[i][j] = 0;
         lru_counters[i][j] = 0;
       end
     end
     hit = 0;
     miss = 0;
+    dirty_eviction = 0;
   end
   
   // Random number generation for RANDOM replacement policy
@@ -163,13 +166,13 @@ module l2_cache(input clk, input [10:0] address, input l1_miss, output reg hit, 
         hit = 1;
         miss = 0;
         data_out = data[index][hit_way];
-        $display("L2 Cache HIT: Address=%h, Index=%h, Tag=%h, Way=%0d", address, index, tag, hit_way);
+        $display("L2 Cache %s HIT: Address=%h, Index=%h, Tag=%h, Way=%0d", is_write ? "WRITE" : "READ", address, index, tag, hit_way);
       end else begin
         // Cache miss
         hit = 0;
         miss = 1;
         data_out = 0;
-        $display("L2 Cache MISS: Address=%h, Index=%h, Tag=%h", address, index, tag);
+        $display("L2 Cache %s MISS: Address=%h, Index=%h, Tag=%h", is_write ? "WRITE" : "READ", address, index, tag);
       end
     end else begin
       // L1 didn't miss, so we're not used
@@ -180,14 +183,21 @@ module l2_cache(input clk, input [10:0] address, input l1_miss, output reg hit, 
   
   // Second part: Handle data promotion on clock edge
   always @(posedge clk) begin
+    dirty_eviction <= 0;
+
     // Handle data promotion from main memory to L2
     if (promote_data) begin
       lru_way = select_replacement_way(index);
+      dirty_eviction <= valid[index][lru_way] && dirty[index][lru_way];
       $display("L2 Cache: Promoting data from Memory, Address=%h, Set=%h, Way=%0d, Tag=%h", 
                address, index, lru_way, tag);
+      if (valid[index][lru_way] && dirty[index][lru_way]) begin
+        $display("L2 Cache: Dirty eviction requires memory writeback, Set=%h, Way=%0d", index, lru_way);
+      end
       
       // Update cache with promotion data
       valid[index][lru_way] <= 1;
+      dirty[index][lru_way] <= 0;
       tags[index][lru_way] <= tag;
       data[index][lru_way] <= promotion_data;
       
@@ -195,6 +205,9 @@ module l2_cache(input clk, input [10:0] address, input l1_miss, output reg hit, 
       update_lru_counters(index, lru_way);
     end
     else if (cache_hit) begin
+      if (is_write) begin
+        dirty[index][hit_way] <= 1;
+      end
       // Update LRU counters on hit
       update_lru_counters(index, hit_way);
     end
