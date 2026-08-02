@@ -6,6 +6,7 @@ module testbench;
   wire [10:0] address;
   wire hit_l1, hit_l2;
   wire [31:0] l1_hit_count, l1_miss_count, l2_hit_count, l2_miss_count, writeback_count;
+  wire [31:0] request_count, read_count, write_count, total_cycle_count, stall_cycle_count;
   integer hit_rate_l1, hit_rate_l2;
   real hit_rate_l1_real, hit_rate_l2_real, amat;
 
@@ -38,7 +39,12 @@ module testbench;
     .performance_counter_l1_miss(l1_miss_count),
     .performance_counter_l2_hit(l2_hit_count),
     .performance_counter_l2_miss(l2_miss_count),
-    .performance_counter_writeback(writeback_count)
+    .performance_counter_writeback(writeback_count),
+    .performance_counter_requests(request_count),
+    .performance_counter_reads(read_count),
+    .performance_counter_writes(write_count),
+    .performance_counter_total_cycles(total_cycle_count),
+    .performance_counter_stall_cycles(stall_cycle_count)
   );
 
   always #5 clk = ~clk;
@@ -101,7 +107,10 @@ module testbench;
     $display("*************************************************************");
     $display("L1 Hits: %d, L1 Misses: %d", l1_hit_count, l1_miss_count);
     $display("L2 Hits: %d, L2 Misses: %d", l2_hit_count, l2_miss_count);
+    $display("Requests: %d, Reads: %d, Writes: %d", request_count, read_count, write_count);
     $display("Dirty Writebacks: %d", writeback_count);
+    $display("Modeled Access Cycles: %d", total_cycle_count);
+    $display("Modeled Stall Cycles: %d", stall_cycle_count);
     
     if (l1_hit_count + l1_miss_count > 0) begin
       hit_rate_l1 = (l1_hit_count * 100) / (l1_hit_count + l1_miss_count);
@@ -120,6 +129,10 @@ module testbench;
       amat = amat + (l1_miss_count * 1.0 / (l1_hit_count + l1_miss_count)) * 
              (10.0 + (l2_miss_count * 1.0 / l1_miss_count) * 100.0);
       $display("Average Memory Access Time (AMAT): %.2f cycles", amat);
+    end
+
+    if (request_count > 0) begin
+      $display("Measured Average Access Cost: %.2f cycles", (total_cycle_count * 1.0) / request_count);
     end
     
     $display("*************************************************************");
