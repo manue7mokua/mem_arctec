@@ -8,6 +8,8 @@ waveform_*.vcd
 
 # Temporary files
 .cursor/
+__pycache__/
+*.pyc
 
 # Editor-specific files
 *.swp
