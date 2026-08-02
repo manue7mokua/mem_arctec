@@ -1,6 +1,10 @@
 #!/usr/bin/env python3
 import random
 
+def random_op(write_ratio=0.30):
+    return "W" if random.random() < write_ratio else "R"
+
+
 def generate_trace(num_addresses=10000, output_file="test/large_trace.txt"):
     """Generate a trace file with memory access patterns for cache testing."""
     
@@ -8,7 +12,7 @@ def generate_trace(num_addresses=10000, output_file="test/large_trace.txt"):
         # Sequential access pattern (10%)
         for i in range(int(num_addresses * 0.1)):
             addr = (i * 16) % 2048  # 16-byte stride, wrap around at 2048
-            f.write(f"{addr:03X}\n")
+            f.write(f"{random_op(0.10)} {addr:03X}\n")
         
         # Random access pattern with locality (20%)
         locality_regions = [
@@ -25,14 +29,14 @@ def generate_trace(num_addresses=10000, output_file="test/large_trace.txt"):
         for i in range(int(num_addresses * 0.2)):
             region = random.choice(locality_regions)
             addr = random.randint(region[0], region[1])
-            f.write(f"{addr:03X}\n")
+            f.write(f"{random_op(0.25)} {addr:03X}\n")
         
         # Strided access pattern (15%)
         strides = [16, 32, 64, 128]  # Different stride sizes
         for i in range(int(num_addresses * 0.15)):
             stride = random.choice(strides)
             addr = (i * stride) % 2048
-            f.write(f"{addr:03X}\n")
+            f.write(f"{random_op(0.20)} {addr:03X}\n")
         
         # Loop pattern (25%)
         # Create several small loops that access the same few addresses repeatedly
@@ -47,7 +51,7 @@ def generate_trace(num_addresses=10000, output_file="test/large_trace.txt"):
             # Access these addresses repeatedly in the loop
             for i in range(addresses_per_loop):
                 addr = loop_addresses[i % loop_size]
-                f.write(f"{addr:03X}\n")
+                f.write(f"{random_op(0.35)} {addr:03X}\n")
         
         # Mixed pattern with cache conflicts (30%)
         # Generate addresses that would map to the same cache sets
@@ -57,8 +61,8 @@ def generate_trace(num_addresses=10000, output_file="test/large_trace.txt"):
             tag = random.randint(0, 7)  # Random tag
             # Construct address: tag bits + index bits + offset bits (all 0)
             addr = (tag << 8) | (set_index << 4)
-            f.write(f"{addr:03X}\n")
+            f.write(f"{random_op(0.45)} {addr:03X}\n")
 
 if __name__ == "__main__":
     generate_trace(10000, "test/large_trace.txt")
-    print("Generated trace file with 10,000 memory addresses") 
+    print("Generated trace file with 10,000 read/write requests") 

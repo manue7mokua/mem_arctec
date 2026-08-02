@@ -1,6 +1,6 @@
 # Two-Level Cache Hierarchy Simulation
 
-This project implements a Verilog simulation of a two-level memory cache hierarchy with configurable mapping strategies and replacement policies.
+This project implements a Verilog simulation of a two-level memory cache hierarchy with configurable mapping strategies, replacement policies, read/write traces, write-back dirty state, and modeled access-cycle accounting.
 
 ## Cache Specifications
 
@@ -24,6 +24,9 @@ This project implements a Verilog simulation of a two-level memory cache hierarc
 - **Performance Tracking**:
 
   - L1 and L2 hit/miss counts
+  - Read and write request counts
+  - Dirty writeback counts
+  - Total modeled access cycles and stall cycles
   - Hit rates
   - Average Memory Access Time (AMAT) calculation
 
@@ -45,7 +48,9 @@ This project implements a Verilog simulation of a two-level memory cache hierarc
 
 - `test/`
   - `testbench.v`: Testbench to run and evaluate the simulation
-  - `test_trace.txt`: Memory access trace file
+  - `test_trace.txt`: Read/write memory access trace file
+  - `generate_trace.py`: Generates larger mixed read/write traces
+  - `generate_simple_trace.py`: Generates simple sequential read/write traces
 
 ## How to Run
 
@@ -92,9 +97,13 @@ iverilog -DCACHE_MAPPING_L1=1 -DCACHE_MAPPING_L2=2 -DREPLACEMENT_POLICY_L1=0 -DR
 The simulation provides detailed performance metrics:
 
 - **Hit/Miss Counters**: Raw count of cache hits and misses at each level
+- **Request Mix**: Total read and write requests emitted by the CPU trace reader
+- **Dirty Writebacks**: Number of dirty cache-line evictions that require a writeback
+- **Cycle Counters**: Total modeled access cycles and stall cycles from L1/L2/memory latency
 - **Hit Rates**: Percentage of accesses that resulted in a hit
+- **Measured Average Access Cost**: Total modeled access cycles divided by total requests
 - **AMAT (Average Memory Access Time)**: Calculated based on the formula:
-  - AMAT = L1 access time + L1 miss rate _ (L2 access time + L2 miss rate _ Memory access time)
+  - AMAT = L1 access time + L1 miss rate * (L2 access time + L2 miss rate * Memory access time)
 
 The simulation also includes detailed console output showing:
 
@@ -104,7 +113,7 @@ The simulation also includes detailed console output showing:
 
 ## Testing Different Access Patterns
 
-The `test_trace.txt` file contains various memory access patterns to evaluate cache performance:
+The `test_trace.txt` file contains various read/write memory access patterns to evaluate cache performance:
 
 - Sequential access
 - Repeated access
@@ -112,8 +121,16 @@ The `test_trace.txt` file contains various memory access patterns to evaluate ca
 - Random access
 - Loop patterns
 - Interleaved access
+- Write-heavy conflict patterns
 
-You can customize this file to test your own access patterns.
+Trace lines use this format:
+
+```
+R 010
+W 110
+```
+
+The first token is the operation (`R` for read, `W` for write) and the second token is the hexadecimal address. Legacy address-only lines are still treated as reads.
 
 ## Implementation Details
 
@@ -130,6 +147,20 @@ The exact bit partitioning is calculated dynamically based on the cache configur
 
 - When there's an L1 miss but L2 hit, data is promoted from L2 to L1
 - When there's both an L1 and L2 miss, data is fetched from main memory and placed in both caches
+
+### Write Behavior
+
+- The simulator models write-allocate behavior: a write miss allocates the requested line into L1
+- L1 tracks dirty bits for write-back behavior
+- Dirty evictions increment the writeback counter, making write pressure visible in the final metrics
+
+### Cycle Accounting
+
+- Each valid request is classified by where it is served:
+  - L1 hit: L1 latency
+  - L1 miss and L2 hit: L1 + L2 latency
+  - L1 miss and L2 miss: L1 + L2 + main memory latency
+- Stall cycles are counted as all modeled access cycles beyond the L1 access latency
 
 ### Cache Replacement
 
