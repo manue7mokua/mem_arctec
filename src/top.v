@@ -70,6 +70,7 @@ module top(input clk, output [10:0] address, output hit_l1, output hit_l2, outpu
   main_memory main_memory_inst (
     .clk(clk),
     .address(cpu_address),
+    .l2_miss(miss_l2),
     .data_out(data_mem)
   );
   

@@ -16,15 +16,19 @@ module cpu(input clk, output reg [10:0] address);
       trace_mem[i] = 11'h0;
     end
     
-    // Read the trace file - make sure path is relative to where the simulation runs
+    // Read the trace file - make sure path is relative to where the simulation runs.
     file = $fopen("test/large_trace.txt", "r");
     if (file == 0) begin
-      $display("Error: Could not open large trace file at test/large_trace.txt");
-      // Try an alternative path
-      file = $fopen("large_trace.txt", "r");
+      file = $fopen("test/test_trace.txt", "r");
       if (file == 0) begin
-        $display("Error: Could not open large trace file at large_trace.txt either");
-        $finish;
+        file = $fopen("large_trace.txt", "r");
+        if (file == 0) begin
+          file = $fopen("test_trace.txt", "r");
+          if (file == 0) begin
+            $display("Error: Could not open a memory trace file");
+            $finish;
+          end
+        end
       end
     end
     
