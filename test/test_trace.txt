@@ -1,192 +1,104 @@
 // Memory trace file for testing the two-level cache hierarchy
-// Format: Each line contains a single hexadecimal memory address to access
-// Total addresses: 135
+// Format: one request per line: R <hex-address> or W <hex-address>
+// Legacy address-only lines are still treated as reads by src/cpu.v.
 
-// Sequential access pattern
-10
-20
-30
-40
-50
-60
-70
-80
-90
-A0
+// Sequential read warmup
+R 010
+R 020
+R 030
+R 040
+R 050
+R 060
+R 070
+R 080
+R 090
+R 0A0
 
-// Repeated access to test L1 cache hits (same addresses multiple times)
-10  // Should be a hit if still in L1
-10  // Definitely a hit
-10  // Definitely a hit
-20  // Should be a hit if still in L1
-20  // Definitely a hit
-30  // Should be a hit if still in L1
-30  // Definitely a hit
-40  // Should be a hit if still in L1
-40  // Definitely a hit
-50  // Should be a hit if still in L1
-50  // Definitely a hit
+// Repeated reads should become L1 hits
+R 010
+R 010
+R 020
+R 020
+R 030
+R 030
+R 040
+R 040
+R 050
+R 050
 
-// Stride access pattern (stride of 32 bytes - maps to same L1 cache index)
-10
-30
-50
-70
-90
-B0
-D0
-F0
+// Writes to resident lines should mark dirty state once writeback is enabled
+W 010
+W 020
+W 030
+R 010
+R 020
+R 030
 
-// Now repeat the stride access to test L1 cache hits
-10  // Should be a hit
-30  // Should be a hit
-50  // Should be a hit
-70  // Should be a hit
-90  // Should be a hit
-B0  // Should be a hit
-D0  // Should be a hit
-F0  // Should be a hit
+// Strided access pattern that creates set pressure
+R 010
+R 030
+R 050
+R 070
+R 090
+R 0B0
+R 0D0
+R 0F0
 
-// Random access pattern
-25
-A7
-F3
-64
-B1
-D9
-34
-7C
+// Write burst with locality
+W 100
+W 110
+W 120
+R 100
+R 110
+R 120
+W 100
+W 110
+W 120
 
-// Repeat random accesses to test hits
-25  // Should be a hit
-A7  // Should be a hit
-F3  // Should be a hit
-64  // Should be a hit
-B1  // Should be a hit
-D9  // Should be a hit
-34  // Should be a hit
-7C  // Should be a hit
+// Mixed random accesses
+R 025
+W 0A7
+R 0F3
+W 064
+R 0B1
+W 0D9
+R 034
+W 07C
+R 025
+R 0A7
+R 0F3
+R 064
 
-// Loop pattern (tight loop with repeated accesses should have high hit rate)
-100
-110
-120
-100  // Should be a hit
-110  // Should be a hit
-120  // Should be a hit
-100  // Should be a hit
-110  // Should be a hit
-120  // Should be a hit
-100  // Should be a hit
-110  // Should be a hit
-120  // Should be a hit
-100  // Should be a hit
-110  // Should be a hit
-120  // Should be a hit
+// Conflict-heavy accesses across the 2 KiB address space
+W 200
+W 300
+W 400
+R 200
+R 300
+R 400
+W 500
+W 510
+W 520
+W 530
+R 500
+R 510
+R 520
+R 530
 
-// Interleaved access pattern
-200
-300
-400
-200  // Should be a hit
-300  // Should be a hit
-400  // Should be a hit
-200  // Should be a hit
-300  // Should be a hit
-400  // Should be a hit
-200  // Should be a hit
-300  // Should be a hit
-400  // Should be a hit
-200  // Should be a hit
-300  // Should be a hit
-400  // Should be a hit
-
-// Sequential pattern to fill cache
-500
-510
-520
-530
-540
-550
-560
-570
-580
-590
-5A0
-5B0
-5C0
-5D0
-5E0
-5F0
-
-// Random burst of 16 accesses
-600
-610
-620
-630
-640
-650
-660
-670
-680
-690
-6A0
-6B0
-6C0
-6D0
-6E0
-6F0
-
-// Large stride pattern (jumps over large areas)
-10  // Should be a hit from earlier
-110
-210
-310
-410
-510
-610
-710
-10  // Should be a hit
-110  // Should be a hit
-210  // Should be a hit
-310  // Should be a hit
-410  // Should be a hit
-510  // Should be a hit
-610  // Should be a hit
-710  // Should be a hit
-
-// Sequential pattern overlapping with earlier addressed regions
-20  // Should be a hit from earlier
-21
-22
-23
-24
-25  // Should be a hit from earlier
-26
-27
-28
-29
-2A
-2B
-2C
-2D
-2E
-2F
-
-// More sequence to fill up to 128 addresses
-400
-401
-402
-403
-404
-405
-406
-407
-408
-409
-40A
-40B
-40C
-40D
-40E
-40F
+// Large stride pattern
+R 010
+R 110
+R 210
+R 310
+R 410
+R 510
+R 610
+R 710
+W 010
+W 110
+W 210
+W 310
+W 410
+W 510
+W 610
+W 710

@@ -4,6 +4,8 @@ module top(input clk, output [10:0] address, output hit_l1, output hit_l2, outpu
   `include "src/cache_config.v"
 
   wire [10:0] cpu_address;
+  wire cpu_is_write;
+  wire cpu_request_valid;
   wire [31:0] data_l1, data_l2, data_mem;
   wire miss_l1, miss_l2;
   
@@ -30,7 +32,9 @@ module top(input clk, output [10:0] address, output hit_l1, output hit_l2, outpu
   // Instantiate CPU with the trace file
   cpu cpu_inst (
     .clk(clk),
-    .address(cpu_address)
+    .address(cpu_address),
+    .is_write(cpu_is_write),
+    .request_valid(cpu_request_valid)
   );
   
   // Instantiate L1 Cache with parameters
