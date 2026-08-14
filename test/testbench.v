@@ -52,8 +52,10 @@ module testbench;
   always #5 clk = ~clk;
 
   initial begin
-    $dumpfile("output.vcd");
-    $dumpvars(0, testbench);
+    if ($test$plusargs("VCD")) begin
+      $dumpfile("output.vcd");
+      $dumpvars(0, testbench);
+    end
     
     $display("\n*************************************************************");
     $display("* CACHE HIERARCHY SIMULATION - CONFIGURATION *");
@@ -112,8 +114,8 @@ module testbench;
     $display("L2 Hits: %d, L2 Misses: %d", l2_hit_count, l2_miss_count);
     $display("Requests: %d, Reads: %d, Writes: %d", request_count, read_count, write_count);
     $display("Dirty Writebacks: %d", writeback_count);
-    $display("Modeled Access Cycles: %d", total_cycle_count);
-    $display("Modeled Stall Cycles: %d", stall_cycle_count);
+    $display("Actual Transaction Cycles: %d", total_cycle_count);
+    $display("Actual Stall Cycles: %d", stall_cycle_count);
     
     if (l1_hit_count + l1_miss_count > 0) begin
       hit_rate_l1 = (l1_hit_count * 100) / (l1_hit_count + l1_miss_count);
@@ -131,11 +133,11 @@ module testbench;
     if (l1_hit_count + l1_miss_count > 0) begin
       amat = amat + (l1_miss_count * 1.0 / (l1_hit_count + l1_miss_count)) * 
              (10.0 + (l2_miss_count * 1.0 / l1_miss_count) * 100.0);
-      $display("Average Memory Access Time (AMAT): %.2f cycles", amat);
+      $display("Analytical Demand AMAT: %.2f cycles", amat);
     end
 
     if (request_count > 0) begin
-      $display("Measured Average Access Cost: %.2f cycles", (total_cycle_count * 1.0) / request_count);
+      $display("Measured Average Transaction Cost: %.2f cycles", (total_cycle_count * 1.0) / request_count);
     end
     
     $display("*************************************************************");
@@ -148,23 +150,4 @@ module testbench;
     $finish;
   end
 
-  integer progress_counter = 0;
-  parameter REPORT_INTERVAL = 1000;
-  
-  always @(posedge clk) begin
-    progress_counter = progress_counter + 1;
-    if (progress_counter % REPORT_INTERVAL == 0) begin
-      $display("Processed %d addresses", progress_counter);
-      if (l1_hit_count + l1_miss_count > 0) begin
-        hit_rate_l1 = (l1_hit_count * 100) / (l1_hit_count + l1_miss_count);
-        hit_rate_l1_real = hit_rate_l1 / 100.0;
-        $display("Current L1 Hit Rate: %.2f%%", hit_rate_l1_real * 100.0);
-      end
-      if (l1_miss_count > 0) begin
-        hit_rate_l2 = (l2_hit_count * 100) / l1_miss_count;
-        hit_rate_l2_real = hit_rate_l2 / 100.0;
-        $display("Current L2 Hit Rate: %.2f%%", hit_rate_l2_real * 100.0);
-      end
-    end
-  end
 endmodule
