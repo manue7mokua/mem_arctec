@@ -1,4 +1,11 @@
-module cpu(input clk, output reg [10:0] address, output reg is_write, output reg request_valid);
+module cpu(
+  input clk,
+  input request_ready,
+  output reg [10:0] address,
+  output reg is_write,
+  output reg request_valid,
+  output reg trace_done
+);
   parameter MAX_TRACE_SIZE = 10000;
   reg [10:0] trace_mem[0:MAX_TRACE_SIZE-1];
   reg trace_write[0:MAX_TRACE_SIZE-1];
@@ -8,6 +15,7 @@ module cpu(input clk, output reg [10:0] address, output reg is_write, output reg
   reg [10:0] addr_val;
   reg [8*80-1:0] line;
   reg [8*8-1:0] op_token;
+  reg [8*256-1:0] trace_path;
   reg loaded_request;
 
   // Output debug every 1000 cycles
@@ -22,9 +30,20 @@ module cpu(input clk, output reg [10:0] address, output reg is_write, output reg
     address = 11'h0;
     is_write = 1'b0;
     request_valid = 1'b0;
+    trace_done = 1'b0;
     
-    // Read the trace file - make sure path is relative to where the simulation runs.
-    file = $fopen("test/large_trace.txt", "r");
+    // Prefer an explicit +TRACE=<path>, then fall back to the project traces.
+    file = 0;
+    if ($value$plusargs("TRACE=%s", trace_path)) begin
+      file = $fopen(trace_path, "r");
+      if (file == 0) begin
+        $display("Error: Could not open trace file: %s", trace_path);
+        $finish;
+      end
+    end
+
+    if (file == 0)
+      file = $fopen("test/large_trace.txt", "r");
     if (file == 0) begin
       file = $fopen("test/test_trace.txt", "r");
       if (file == 0) begin
@@ -90,36 +109,32 @@ module cpu(input clk, output reg [10:0] address, output reg is_write, output reg
     end
     
     i = 0;
+    if (trace_size > 0) begin
+      address = trace_mem[0];
+      is_write = trace_write[0];
+      request_valid = 1'b1;
+    end else begin
+      trace_done = 1'b1;
+    end
   end
 
   always @(posedge clk) begin
     cycle_count = cycle_count + 1;
     
-    if (i < trace_size) begin
-      address <= trace_mem[i];
-      is_write <= trace_write[i];
-      request_valid <= 1'b1;
-      
+    if (request_valid && request_ready) begin
       // Debug output for key addresses only
       if (cycle_count % 1000 == 0 || i < 20) begin
         $display("CPU emitting request[%0d] = %s %h", i, trace_write[i] ? "W" : "R", trace_mem[i]);
       end
-      
-      i <= i + 1;
-    end else begin
-      if (trace_size == 0) begin
-        // No addresses loaded, use a default
-        address <= 11'h0;
-        is_write <= 1'b0;
-        request_valid <= 1'b0;
-        $display("Warning: No addresses loaded from trace file, using default address 000");
+
+      if (i + 1 < trace_size) begin
+        i <= i + 1;
+        address <= trace_mem[i + 1];
+        is_write <= trace_write[i + 1];
       end else begin
-        // Reset to the beginning of the trace
-        i <= 0;
-        address <= trace_mem[0];
-        is_write <= trace_write[0];
-        request_valid <= 1'b1;
-        $display("CPU reset to request[0] = %s %h", trace_write[0] ? "W" : "R", trace_mem[0]);
+        request_valid <= 1'b0;
+        trace_done <= 1'b1;
+        $display("CPU completed trace after %0d requests", trace_size);
       end
     end
   end

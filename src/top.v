@@ -12,7 +12,8 @@ module top(
   output [31:0] performance_counter_reads,
   output [31:0] performance_counter_writes,
   output [31:0] performance_counter_total_cycles,
-  output [31:0] performance_counter_stall_cycles
+  output [31:0] performance_counter_stall_cycles,
+  output trace_done
 );
 
   // Use a simpler include path that will work with the -I flag
@@ -53,9 +54,11 @@ module top(
   // Instantiate CPU with the trace file
   cpu cpu_inst (
     .clk(clk),
+    .request_ready(1'b1),
     .address(cpu_address),
     .is_write(cpu_is_write),
-    .request_valid(cpu_request_valid)
+    .request_valid(cpu_request_valid),
+    .trace_done(trace_done)
   );
   
   // Instantiate L1 Cache with parameters

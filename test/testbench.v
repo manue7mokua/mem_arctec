@@ -7,6 +7,7 @@ module testbench;
   wire hit_l1, hit_l2;
   wire [31:0] l1_hit_count, l1_miss_count, l2_hit_count, l2_miss_count, writeback_count;
   wire [31:0] request_count, read_count, write_count, total_cycle_count, stall_cycle_count;
+  wire trace_done;
   integer hit_rate_l1, hit_rate_l2;
   real hit_rate_l1_real, hit_rate_l2_real, amat;
 
@@ -44,7 +45,8 @@ module testbench;
     .performance_counter_reads(read_count),
     .performance_counter_writes(write_count),
     .performance_counter_total_cycles(total_cycle_count),
-    .performance_counter_stall_cycles(stall_cycle_count)
+    .performance_counter_stall_cycles(stall_cycle_count),
+    .trace_done(trace_done)
   );
 
   always #5 clk = ~clk;
@@ -97,10 +99,11 @@ module testbench;
     $display("L2 Size: %d bytes, Block size: %d bytes", `L2_CACHE_SIZE, `L2_BLOCK_SIZE);
     $display("*************************************************************\n");
     
-    $display("Simulation starting with 10,000 addresses...");
-    
-    // Run simulation for enough cycles to process all addresses
-    #1000000;
+    $display("Simulation starting; it will stop after the trace completes...");
+
+    wait (trace_done);
+    // Let the final accepted request update the counters before reporting.
+    #10;
     
     $display("\n*************************************************************");
     $display("* FINAL PERFORMANCE STATISTICS *");
@@ -136,6 +139,12 @@ module testbench;
     end
     
     $display("*************************************************************");
+    $finish;
+  end
+
+  initial begin
+    #10000000;
+    $display("ERROR: Simulation timed out before the trace completed");
     $finish;
   end
 
