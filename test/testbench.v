@@ -8,8 +8,16 @@ module testbench;
   wire [31:0] l1_hit_count, l1_miss_count, l2_hit_count, l2_miss_count, writeback_count;
   wire [31:0] request_count, read_count, write_count, total_cycle_count, stall_cycle_count;
   wire trace_done;
+  wire response_valid, response_is_write;
+  wire [10:0] response_address;
+  wire [31:0] response_data;
   integer hit_rate_l1, hit_rate_l2;
   real hit_rate_l1_real, hit_rate_l2_real, amat;
+  integer response_count = 0;
+  integer data_error_count = 0;
+  integer expected_init;
+  reg [31:0] expected_memory [0:2047];
+  reg check_data;
 
   // Define which cache configuration we're testing
   // By default, use the configuration from cache_config.v
@@ -46,12 +54,20 @@ module testbench;
     .performance_counter_writes(write_count),
     .performance_counter_total_cycles(total_cycle_count),
     .performance_counter_stall_cycles(stall_cycle_count),
-    .trace_done(trace_done)
+    .trace_done(trace_done),
+    .response_valid(response_valid),
+    .response_is_write(response_is_write),
+    .response_address(response_address),
+    .response_data(response_data)
   );
 
   always #5 clk = ~clk;
 
   initial begin
+    check_data = $test$plusargs("CHECK_DATA");
+    for (expected_init = 0; expected_init < 2048; expected_init = expected_init + 1)
+      expected_memory[expected_init] = expected_init;
+
     if ($test$plusargs("VCD")) begin
       $dumpfile("output.vcd");
       $dumpvars(0, testbench);
@@ -104,8 +120,9 @@ module testbench;
     $display("Simulation starting; it will stop after the trace completes...");
 
     wait (trace_done);
-    // Let the final accepted request update the counters before reporting.
-    #10;
+    // Let the final response pulse reach the scoreboard before reporting.
+    @(posedge clk);
+    #1;
     
     $display("\n*************************************************************");
     $display("* FINAL PERFORMANCE STATISTICS *");
@@ -139,6 +156,19 @@ module testbench;
     if (request_count > 0) begin
       $display("Measured Average Transaction Cost: %.2f cycles", (total_cycle_count * 1.0) / request_count);
     end
+
+    $display("RESULT requests=%0d reads=%0d writes=%0d l1_hits=%0d l1_misses=%0d l2_hits=%0d l2_misses=%0d writebacks=%0d cycles=%0d stalls=%0d responses=%0d data_errors=%0d",
+             request_count, read_count, write_count, l1_hit_count, l1_miss_count,
+             l2_hit_count, l2_miss_count, writeback_count, total_cycle_count,
+             stall_cycle_count, response_count, data_error_count);
+
+    if (response_count != request_count) begin
+      $display("ERROR: response count %0d does not match request count %0d",
+               response_count, request_count);
+      $fatal(1);
+    end
+    if (check_data && data_error_count != 0)
+      $fatal(1);
     
     $display("*************************************************************");
     $finish;
@@ -148,6 +178,19 @@ module testbench;
     #10000000;
     $display("ERROR: Simulation timed out before the trace completed");
     $finish;
+  end
+
+  always @(posedge clk) begin
+    if (response_valid) begin
+      response_count = response_count + 1;
+      if (response_is_write) begin
+        expected_memory[response_address] = response_data;
+      end else if (check_data && response_data !== expected_memory[response_address]) begin
+        data_error_count = data_error_count + 1;
+        $display("DATA_MISMATCH address=%h expected=%h actual=%h",
+                 response_address, expected_memory[response_address], response_data);
+      end
+    end
   end
 
 endmodule

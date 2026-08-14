@@ -13,7 +13,11 @@ module top(
   output [31:0] performance_counter_writes,
   output [31:0] performance_counter_total_cycles,
   output [31:0] performance_counter_stall_cycles,
-  output trace_done
+  output trace_done,
+  output response_valid,
+  output response_is_write,
+  output [10:0] response_address,
+  output [31:0] response_data
 );
   `include "src/cache_config.v"
 
@@ -67,6 +71,10 @@ module top(
   reg [31:0] total_access_cycles;
   reg [31:0] stall_cycle_count;
   reg verbose;
+  reg response_valid_reg;
+  reg response_is_write_reg;
+  reg [10:0] response_address_reg;
+  reg [31:0] response_data_reg;
 
   wire l1_hit;
   wire l1_miss;
@@ -106,6 +114,10 @@ module top(
   assign hit_l1 = l1_hit;
   assign hit_l2 = l2_hit;
   assign trace_done = cpu_trace_done && (state == ST_IDLE);
+  assign response_valid = response_valid_reg;
+  assign response_is_write = response_is_write_reg;
+  assign response_address = response_address_reg;
+  assign response_data = response_data_reg;
   assign performance_counter_l1_hit = l1_hit_count;
   assign performance_counter_l1_miss = l1_miss_count;
   assign performance_counter_l2_hit = l2_hit_count;
@@ -185,6 +197,7 @@ module top(
 
   task complete_request;
     input [31:0] elapsed_cycles;
+    input [31:0] read_response_data;
     begin
       total_access_cycles <= total_access_cycles + elapsed_cycles;
       if (elapsed_cycles > 1)
@@ -192,8 +205,12 @@ module top(
       if (verbose)
         $display("REQUEST_COMPLETE op=%s address=%h data=%h cycles=%0d",
                  request_is_write ? "W" : "R", request_address,
-                 request_is_write ? request_write_data : l1_data,
+                 request_is_write ? request_write_data : read_response_data,
                  elapsed_cycles);
+      response_valid_reg <= 1;
+      response_is_write_reg <= request_is_write;
+      response_address_reg <= request_address;
+      response_data_reg <= request_is_write ? request_write_data : read_response_data;
       state <= ST_IDLE;
     end
   endtask
@@ -225,9 +242,14 @@ module top(
     write_count = 0;
     total_access_cycles = 0;
     stall_cycle_count = 0;
+    response_valid_reg = 0;
+    response_is_write_reg = 0;
+    response_address_reg = 0;
+    response_data_reg = 0;
   end
 
   always @(posedge clk) begin
+    response_valid_reg <= 0;
     if (state != ST_IDLE)
       current_access_cycles <= current_access_cycles + 1;
 
@@ -253,7 +275,7 @@ module top(
           delay_count <= delay_count - 1;
         end else if (l1_hit) begin
           l1_hit_count <= l1_hit_count + 1;
-          complete_request(current_access_cycles + 1);
+          complete_request(current_access_cycles + 1, l1_data);
         end else begin
           l1_miss_count <= l1_miss_count + 1;
           delay_count <= `L2_LATENCY;
@@ -302,7 +324,7 @@ module top(
         end else if (l2_fill_continuation == CONTINUE_L1_FILL) begin
           state <= ST_L1_FILL;
         end else begin
-          complete_request(current_access_cycles + 1);
+          complete_request(current_access_cycles + 1, l1_data);
         end
       end
 
@@ -312,7 +334,7 @@ module top(
         end else if (l2_fill_continuation == CONTINUE_L1_FILL) begin
           state <= ST_L1_FILL;
         end else begin
-          complete_request(current_access_cycles + 1);
+          complete_request(current_access_cycles + 1, l1_data);
         end
       end
 
@@ -328,7 +350,7 @@ module top(
           delay_count <= `L2_LATENCY;
           state <= ST_L1_WB_WAIT;
         end else begin
-          complete_request(current_access_cycles + 1);
+          complete_request(current_access_cycles + 1, l1_data);
         end
       end
 
@@ -336,7 +358,7 @@ module top(
         if (delay_count > 1) begin
           delay_count <= delay_count - 1;
         end else if (l2_hit) begin
-          complete_request(current_access_cycles + 1);
+          complete_request(current_access_cycles + 1, l1_data);
         end else begin
           pending_l2_fill_address <= l1_writeback_address;
           pending_l2_fill_data <= l1_writeback_data;

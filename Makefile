@@ -5,8 +5,9 @@ all: direct_mapped
 
 # Compiler and flags
 IVERILOG = iverilog
-IVERILOG_FLAGS = -o
+IVERILOG_FLAGS = -g2012 -o
 VVP = vvp
+PYTHON = python3
 
 # Simulation output
 SIM_OUT = cache_sim
@@ -141,6 +142,12 @@ view_waveform:
 	@echo "To view a waveform, use: gtkwave <waveform_file.vcd>"
 	@echo "Or upload to https://vc.drom.io/"
 
+# Compile every supported configuration and run protocol/data regressions.
+regression:
+	$(PYTHON) test/run_regression.py
+
+test: regression
+
 # Clean up
 clean:
 	rm -f $(SIM_OUT) output.vcd results_*.txt waveform_*.vcd
@@ -214,4 +221,4 @@ large_compare: $(SRC_FILES)
 	@grep "AMAT" results_large_mixed.txt | tail -1
 	@echo "------------------------------------------------------------"
 
-.PHONY: all direct_mapped two_way_lru two_way_random four_way_lru four_way_random mixed compare view_waveform clean large_trace large_compare simple_trace embedded_trace
+.PHONY: all direct_mapped two_way_lru two_way_random four_way_lru four_way_random mixed compare view_waveform regression test clean large_trace large_compare simple_trace embedded_trace
