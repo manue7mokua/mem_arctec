@@ -4,24 +4,29 @@ module cache_level #(
   parameter MAPPING_TYPE = 0,
   parameter REPLACEMENT_POLICY = 0,
   parameter ADDRESS_WIDTH = 11,
-  parameter RANDOM_SEED = 32'h1
+  parameter DATA_WIDTH = 32,
+  parameter RANDOM_SEED = 32'h1,
+  parameter LINE_WIDTH = BLOCK_SIZE * 8
 )(
   input clk,
   input [ADDRESS_WIDTH-1:0] lookup_address,
   input lookup_is_write,
-  input [31:0] lookup_write_data,
+  input [DATA_WIDTH-1:0] lookup_write_data,
+  input lookup_line_write_enable,
+  input [LINE_WIDTH-1:0] lookup_line_write_data,
   input access_enable,
   output reg hit,
   output reg miss,
-  output reg [31:0] data_out,
+  output reg [DATA_WIDTH-1:0] data_out,
+  output reg [LINE_WIDTH-1:0] line_out,
   input fill_enable,
   input [ADDRESS_WIDTH-1:0] fill_address,
-  input [31:0] fill_data,
+  input [LINE_WIDTH-1:0] fill_line,
   input fill_dirty,
   output reg eviction_valid,
   output reg eviction_dirty,
   output reg [ADDRESS_WIDTH-1:0] eviction_address,
-  output reg [31:0] eviction_data
+  output reg [LINE_WIDTH-1:0] eviction_line
 );
   `include "src/cache_config.v"
 
@@ -30,6 +35,7 @@ module cache_level #(
                     (MAPPING_TYPE == `FOUR_WAY) ? 4 : 1;
   localparam NUM_SETS = CACHE_SIZE / BLOCK_SIZE / WAYS;
   localparam OFFSET_BITS = `COMPUTE_OFFSET_BITS(BLOCK_SIZE);
+  localparam WORD_OFFSET_BITS = OFFSET_BITS - `COMPUTE_OFFSET_BITS(DATA_WIDTH / 8);
   localparam INDEX_BITS = `COMPUTE_INDEX_BITS(NUM_SETS);
   localparam TAG_BITS = ADDRESS_WIDTH - INDEX_BITS - OFFSET_BITS;
 
@@ -37,6 +43,8 @@ module cache_level #(
     lookup_address[OFFSET_BITS+INDEX_BITS-1:OFFSET_BITS];
   wire [TAG_BITS-1:0] lookup_tag =
     lookup_address[ADDRESS_WIDTH-1:OFFSET_BITS+INDEX_BITS];
+  wire [WORD_OFFSET_BITS-1:0] lookup_word_offset =
+    lookup_address[OFFSET_BITS-1:2];
   wire [INDEX_BITS-1:0] fill_index =
     fill_address[OFFSET_BITS+INDEX_BITS-1:OFFSET_BITS];
   wire [TAG_BITS-1:0] fill_tag =
@@ -45,7 +53,7 @@ module cache_level #(
   reg valid [0:NUM_SETS-1][0:WAYS-1];
   reg dirty [0:NUM_SETS-1][0:WAYS-1];
   reg [TAG_BITS-1:0] tags [0:NUM_SETS-1][0:WAYS-1];
-  reg [31:0] data [0:NUM_SETS-1][0:WAYS-1];
+  reg [LINE_WIDTH-1:0] lines [0:NUM_SETS-1][0:WAYS-1];
   reg [31:0] last_used [0:NUM_SETS-1][0:WAYS-1];
   reg [31:0] use_clock;
   reg [31:0] random_state;
@@ -65,13 +73,13 @@ module cache_level #(
     eviction_valid = 0;
     eviction_dirty = 0;
     eviction_address = 0;
-    eviction_data = 0;
+    eviction_line = 0;
     for (init_set = 0; init_set < NUM_SETS; init_set = init_set + 1) begin
       for (init_way = 0; init_way < WAYS; init_way = init_way + 1) begin
         valid[init_set][init_way] = 0;
         dirty[init_set][init_way] = 0;
         tags[init_set][init_way] = 0;
-        data[init_set][init_way] = 0;
+        lines[init_set][init_way] = 0;
         last_used[init_set][init_way] = 0;
       end
     end
@@ -81,13 +89,16 @@ module cache_level #(
     hit = 0;
     miss = 1;
     data_out = 0;
+    line_out = 0;
     lookup_way = 0;
     for (lookup_iter = 0; lookup_iter < WAYS; lookup_iter = lookup_iter + 1) begin
       if (valid[lookup_index][lookup_iter] &&
           tags[lookup_index][lookup_iter] == lookup_tag) begin
         hit = 1;
         miss = 0;
-        data_out = data[lookup_index][lookup_iter];
+        line_out = lines[lookup_index][lookup_iter];
+        data_out = lines[lookup_index][lookup_iter]
+          [lookup_word_offset * DATA_WIDTH +: DATA_WIDTH];
         lookup_way = lookup_iter;
       end
     end
@@ -125,20 +136,24 @@ module cache_level #(
       eviction_valid <= valid[fill_index][fill_way];
       eviction_dirty <= valid[fill_index][fill_way] && dirty[fill_index][fill_way];
       eviction_address <= {tags[fill_index][fill_way], fill_index, {OFFSET_BITS{1'b0}}};
-      eviction_data <= data[fill_index][fill_way];
+      eviction_line <= lines[fill_index][fill_way];
 
       valid[fill_index][fill_way] <= 1;
       dirty[fill_index][fill_way] <= fill_dirty;
       tags[fill_index][fill_way] <= fill_tag;
-      data[fill_index][fill_way] <= fill_data;
+      lines[fill_index][fill_way] <= fill_line;
       last_used[fill_index][fill_way] <= use_clock;
       use_clock <= use_clock + 1;
       random_state <= {random_state[30:0],
                        random_state[31] ^ random_state[21] ^
                        random_state[1] ^ random_state[0]};
     end else if (access_enable && hit) begin
-      if (lookup_is_write) begin
-        data[lookup_index][lookup_way] <= lookup_write_data;
+      if (lookup_line_write_enable) begin
+        lines[lookup_index][lookup_way] <= lookup_line_write_data;
+        dirty[lookup_index][lookup_way] <= 1;
+      end else if (lookup_is_write) begin
+        lines[lookup_index][lookup_way]
+          [lookup_word_offset * DATA_WIDTH +: DATA_WIDTH] <= lookup_write_data;
         dirty[lookup_index][lookup_way] <= 1;
       end
       last_used[lookup_index][lookup_way] <= use_clock;

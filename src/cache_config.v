@@ -20,6 +20,13 @@ end
 `define L1_BLOCK_SIZE 16  // 16 bytes per block
 `define L2_BLOCK_SIZE 32  // 32 bytes per block
 
+// Data organization
+`define DATA_WIDTH 32
+`define BYTES_PER_WORD (`DATA_WIDTH / 8)
+`define L1_LINE_WIDTH (`L1_BLOCK_SIZE * 8)
+`define L2_LINE_WIDTH (`L2_BLOCK_SIZE * 8)
+`define MEMORY_WORDS (`MAIN_MEMORY_SIZE / `BYTES_PER_WORD)
+
 // Mapping Types
 `define DIRECT_MAPPED 0
 `define TWO_WAY 1
@@ -71,7 +78,7 @@ end
     ((x) <= 2048) ? 11 : 12
 
 // Compute the number of bits for block offset
-`define COMPUTE_OFFSET_BITS(block_size) `LOG2(block_size)
+`define COMPUTE_OFFSET_BITS(block_size) (`LOG2(block_size))
 
 // Compute the number of sets
 `define COMPUTE_NUM_SETS(cache_size, block_size, mapping_type) \
@@ -81,7 +88,7 @@ end
      ((cache_size) / (block_size)))
 
 // Compute the number of bits for set index
-`define COMPUTE_INDEX_BITS(num_sets) `LOG2(num_sets)
+`define COMPUTE_INDEX_BITS(num_sets) (`LOG2(num_sets))
 
 // Compute the number of bits for tag
 `define COMPUTE_TAG_BITS(addr_width, index_bits, offset_bits) ((addr_width) - (index_bits) - (offset_bits))
@@ -92,4 +99,4 @@ end
              addr, \
              (addr >> (index_bits + offset_bits)), \
              ((addr >> offset_bits) & ((1 << index_bits) - 1)), \
-             (addr & ((1 << offset_bits) - 1))) 
+             (addr & ((1 << offset_bits) - 1)))

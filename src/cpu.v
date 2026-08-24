@@ -73,6 +73,8 @@ module cpu(
       
       if (status != 0) begin
         loaded_request = 1'b0;
+        // Addresses are byte addresses. The cache hierarchy uses bits [1:0]
+        // to select the containing 32-bit word for unaligned trace entries.
         data_val = 0;
         status = $sscanf(line, "%s %h %h", op_token, addr_val, data_val);
         if (status == 1) begin
