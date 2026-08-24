@@ -7,6 +7,8 @@ module testbench;
   wire hit_l1, hit_l2;
   wire [31:0] l1_hit_count, l1_miss_count, l2_hit_count, l2_miss_count, writeback_count;
   wire [31:0] request_count, read_count, write_count, total_cycle_count, stall_cycle_count;
+  wire [31:0] l1_line_fill_count, l2_line_fill_count;
+  wire [31:0] memory_line_read_count, memory_line_write_count;
   wire trace_done;
   wire response_valid, response_is_write;
   wire [10:0] response_address;
@@ -16,7 +18,7 @@ module testbench;
   integer response_count = 0;
   integer data_error_count = 0;
   integer expected_init;
-  reg [31:0] expected_memory [0:2047];
+  reg [31:0] expected_words [0:511];
   reg check_data;
 
   // Define which cache configuration we're testing
@@ -54,6 +56,10 @@ module testbench;
     .performance_counter_writes(write_count),
     .performance_counter_total_cycles(total_cycle_count),
     .performance_counter_stall_cycles(stall_cycle_count),
+    .performance_counter_l1_line_fills(l1_line_fill_count),
+    .performance_counter_l2_line_fills(l2_line_fill_count),
+    .performance_counter_memory_line_reads(memory_line_read_count),
+    .performance_counter_memory_line_writes(memory_line_write_count),
     .trace_done(trace_done),
     .response_valid(response_valid),
     .response_is_write(response_is_write),
@@ -65,8 +71,8 @@ module testbench;
 
   initial begin
     check_data = $test$plusargs("CHECK_DATA");
-    for (expected_init = 0; expected_init < 2048; expected_init = expected_init + 1)
-      expected_memory[expected_init] = expected_init;
+    for (expected_init = 0; expected_init < 512; expected_init = expected_init + 1)
+      expected_words[expected_init] = expected_init * 4;
 
     if ($test$plusargs("VCD")) begin
       $dumpfile("output.vcd");
@@ -133,6 +139,9 @@ module testbench;
     $display("Dirty Writebacks: %d", writeback_count);
     $display("Actual Transaction Cycles: %d", total_cycle_count);
     $display("Actual Stall Cycles: %d", stall_cycle_count);
+    $display("Line Fills: L1=%0d, L2=%0d", l1_line_fill_count, l2_line_fill_count);
+    $display("Memory Line Traffic: Reads=%0d, Writes=%0d",
+             memory_line_read_count, memory_line_write_count);
     
     if (l1_hit_count + l1_miss_count > 0) begin
       hit_rate_l1 = (l1_hit_count * 100) / (l1_hit_count + l1_miss_count);
@@ -157,10 +166,12 @@ module testbench;
       $display("Measured Average Transaction Cost: %.2f cycles", (total_cycle_count * 1.0) / request_count);
     end
 
-    $display("RESULT requests=%0d reads=%0d writes=%0d l1_hits=%0d l1_misses=%0d l2_hits=%0d l2_misses=%0d writebacks=%0d cycles=%0d stalls=%0d responses=%0d data_errors=%0d",
+    $display("RESULT requests=%0d reads=%0d writes=%0d l1_hits=%0d l1_misses=%0d l2_hits=%0d l2_misses=%0d writebacks=%0d cycles=%0d stalls=%0d responses=%0d data_errors=%0d l1_fills=%0d l2_fills=%0d memory_reads=%0d memory_writes=%0d",
              request_count, read_count, write_count, l1_hit_count, l1_miss_count,
              l2_hit_count, l2_miss_count, writeback_count, total_cycle_count,
-             stall_cycle_count, response_count, data_error_count);
+             stall_cycle_count, response_count, data_error_count,
+             l1_line_fill_count, l2_line_fill_count,
+             memory_line_read_count, memory_line_write_count);
 
     if (response_count != request_count) begin
       $display("ERROR: response count %0d does not match request count %0d",
@@ -184,11 +195,12 @@ module testbench;
     if (response_valid) begin
       response_count = response_count + 1;
       if (response_is_write) begin
-        expected_memory[response_address] = response_data;
-      end else if (check_data && response_data !== expected_memory[response_address]) begin
+        expected_words[response_address[10:2]] = response_data;
+      end else if (check_data &&
+                   response_data !== expected_words[response_address[10:2]]) begin
         data_error_count = data_error_count + 1;
         $display("DATA_MISMATCH address=%h expected=%h actual=%h",
-                 response_address, expected_memory[response_address], response_data);
+                 response_address, expected_words[response_address[10:2]], response_data);
       end
     end
   end

@@ -1,0 +1,17 @@
+// Read every word in both L1 halves of one L2 line.
+R 000
+R 004
+R 008
+R 00C
+R 010
+R 014
+R 018
+R 01C
+
+// Unaligned addresses intentionally alias their containing 32-bit word.
+W 005 AAAAAAAA
+R 004
+R 007
+W 01F BBBBBBBB
+R 01C
+R 01D

@@ -1,0 +1,33 @@
+// Give all eight words in one L2 line distinct values.
+W 000 11111111
+W 004 22222222
+W 008 33333333
+W 00C 44444444
+W 010 55555555
+W 014 66666666
+W 018 77777777
+W 01C 88888888
+
+// Create enough pressure to evict the dirty halves through both levels.
+R 080
+R 100
+R 180
+R 200
+R 280
+R 300
+R 380
+R 400
+R 480
+R 500
+R 580
+R 600
+
+// Reload and verify the entire line, not just one representative word.
+R 000
+R 004
+R 008
+R 00C
+R 010
+R 014
+R 018
+R 01C

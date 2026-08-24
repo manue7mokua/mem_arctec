@@ -89,6 +89,10 @@ def assert_invariants(result: dict[str, int], expected_requests: int) -> None:
     assert result["cycles"] >= expected_requests, result
     assert result["stalls"] == result["cycles"] - expected_requests, result
     assert result["data_errors"] == 0, result
+    assert result["l1_fills"] == result["l1_misses"], result
+    assert result["l2_fills"] == result["memory_reads"], result
+    assert result["memory_reads"] >= result["l2_misses"], result
+    assert result["memory_writes"] <= result["writebacks"], result
 
 
 def main() -> None:
@@ -103,7 +107,7 @@ def main() -> None:
             )
 
             standard_output = execute(
-                ["vvp", simulation, "+TRACE=test/test_trace.txt"]
+                ["vvp", simulation, "+TRACE=test/test_trace.txt", "+CHECK_DATA"]
             )
             standard = parse_result(standard_output)
             assert_invariants(standard, expected_requests=85)
@@ -117,6 +121,26 @@ def main() -> None:
                 ]
             )
             assert_invariants(parse_result(data_output), expected_requests=20)
+
+            offset_output = execute(
+                [
+                    "vvp",
+                    simulation,
+                    "+TRACE=test/offset_trace.txt",
+                    "+CHECK_DATA",
+                ]
+            )
+            assert_invariants(parse_result(offset_output), expected_requests=14)
+
+            full_line_output = execute(
+                [
+                    "vvp",
+                    simulation,
+                    "+TRACE=test/full_line_trace.txt",
+                    "+CHECK_DATA",
+                ]
+            )
+            assert_invariants(parse_result(full_line_output), expected_requests=28)
             rows.append((name, standard))
 
         latency_output = execute(
@@ -134,15 +158,22 @@ def main() -> None:
         ]
         assert observed_cycles == [115, 1], observed_cycles
 
-    print("configuration  requests  l1_hits  l2_hits  writebacks  cycles  avg_cycles")
+    print(
+        "configuration  requests  l1_hits  l2_hits  writebacks  "
+        "mem_reads  mem_writes  cycles  avg_cycles"
+    )
     for name, result in rows:
         average = result["cycles"] / result["requests"]
         print(
             f"{name:<14} {result['requests']:>8} {result['l1_hits']:>8} "
             f"{result['l2_hits']:>8} {result['writebacks']:>11} "
+            f"{result['memory_reads']:>9} {result['memory_writes']:>10} "
             f"{result['cycles']:>7} {average:>10.2f}"
         )
-    print("PASS: configuration, handshake, latency, and writeback regressions")
+    print(
+        "PASS: configuration, handshake, word-offset, full-line, latency, "
+        "and writeback regressions"
+    )
 
 
 if __name__ == "__main__":

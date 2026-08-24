@@ -37,6 +37,9 @@ This project implements a cycle-accurate Verilog simulation of a two-level memor
   - Completion-driven simulation termination
   - Dirty L1 writeback to L2 and dirty L2 writeback to memory
   - Optional explicit write values and read-response checking
+  - Four-word L1 lines and eight-word L2 lines
+  - Word-selective access with whole-line refill and writeback
+  - L1-half merging into larger L2 lines
 
 - **Access Latencies**:
   - L1 Cache: 1 cycle
@@ -61,6 +64,8 @@ This project implements a cycle-accurate Verilog simulation of a two-level memor
   - `generate_trace.py`: Generates larger mixed read/write traces
   - `generate_simple_trace.py`: Generates simple sequential read/write traces
   - `data_trace.txt`: Explicit-value trace that forces dirty evictions
+  - `offset_trace.txt`: Word-offset and unaligned-address checks
+  - `full_line_trace.txt`: Whole-line merge, eviction, and reload checks
   - `latency_trace.txt`: Cold-miss/warm-hit latency regression
   - `run_regression.py`: Compiles and verifies every supported configuration
 
@@ -82,6 +87,13 @@ vvp cache_sim +TRACE=test/test_trace.txt
 
 ```
 make regression
+```
+
+For focused cache-line checks:
+
+```
+make offset_check
+make full_line_check
 ```
 
 4. Generate and view a waveform when needed:
@@ -118,6 +130,7 @@ The simulation provides detailed performance metrics:
 - **Hit/Miss Counters**: Raw count of cache hits and misses at each level
 - **Request Mix**: Total read and write requests emitted by the CPU trace reader
 - **Dirty Writebacks**: Number of dirty cache-line evictions that require a writeback
+- **Line Traffic**: L1/L2 fills plus complete memory-line reads and writes
 - **Cycle Counters**: Clock cycles spent servicing transactions, including lookup, refill, and dirty-writeback work
 - **Hit Rates**: Percentage of accesses that resulted in a hit
 - **Measured Average Transaction Cost**: Actual transaction cycles divided by completed requests
@@ -152,7 +165,9 @@ W 110
 W 210 DEADBEEF
 ```
 
-The first token is the operation (`R` for read or `W` for write) and the second token is the hexadecimal address. A write may include a hexadecimal 32-bit value. Writes without a value receive a deterministic value derived from the address. Legacy address-only lines are still treated as reads.
+The first token is the operation (`R` for read or `W` for write) and the second token is a hexadecimal byte address. A write may include a hexadecimal 32-bit value. Writes without a value receive a deterministic value derived from the address. Legacy address-only lines are still treated as reads.
+
+Addresses need not be word-aligned. Low address bits select the containing 32-bit word, so `004`, `005`, `006`, and `007` refer to the same stored word. See [docs/trace-format.md](docs/trace-format.md) for details.
 
 ## Implementation Details
 
@@ -161,22 +176,28 @@ The first token is the operation (`R` for read or `W` for write) and the second 
 - For an 11-bit address (0-2047), the bits are divided into:
   - Tag: Most significant bits
   - Index: Middle bits that determine the cache set
-  - Offset: Least significant bits that determine the byte within a block
+  - Word offset: Selects one 32-bit word within the cache line
+  - Byte offset: The lowest two bits select the containing word
 
 The exact bit partitioning is calculated dynamically based on the cache configuration.
 
 ### Data Promotion
 
-- When there's an L1 miss but L2 hit, data is promoted from L2 to L1
-- When there's both an L1 and L2 miss, data is fetched from main memory and placed in both caches
+- An L1 line is 128 bits: four independently addressable 32-bit words
+- An L2 line is 256 bits: eight independently addressable 32-bit words
+- On an L1 miss/L2 hit, the addressed lower or upper half of the L2 line is promoted
+- On a memory miss, all eight words are fetched into L2 and the addressed four-word half is promoted into L1
+- A dirty L1 eviction replaces only its matching half of the L2 line
 
-Each modeled cache block currently carries one 32-bit payload. The explicit-data regression therefore uses block-aligned addresses.
+See [docs/cache-line-model.md](docs/cache-line-model.md) for the line layout and transfer rules.
 
 ### Write Behavior
 
 - The simulator uses write-allocate behavior: a write miss allocates the requested line into L1
 - L1 writes become dirty and are written into L2 when evicted
-- Dirty L2 victims are written into main memory before the request completes
+- Dirty L1 lines merge into the correct half of an existing L2 line
+- If that L2 line is absent, its other half is fetched from memory before the merge
+- Dirty L2 victims write all eight words into main memory before the request completes
 - Writeback latency contributes to the measured transaction cost
 
 ### Cycle-Accurate Controller
@@ -189,7 +210,7 @@ The CPU holds a request until the hierarchy accepts it. The controller then move
 
 Refill and eviction-controller states add real clock cycles. Stall cycles are all transaction cycles beyond the first request-service cycle. The trace finishes only after its final accepted request has produced a response.
 
-The regression suite checks that a cold memory access completes in 115 cycles with the current refill controller and that the immediately repeated L1 hit completes in 1 cycle.
+The regression suite checks that a cold memory access completes in 115 cycles, the immediately repeated L1 hit completes in 1 cycle, every word offset returns distinct data, and full dirty lines survive eviction and reload in all six cache configurations.
 
 ### Cache Replacement
 
