@@ -13,7 +13,6 @@ module testbench;
   wire response_valid, response_is_write;
   wire [10:0] response_address;
   wire [31:0] response_data;
-  integer hit_rate_l1, hit_rate_l2;
   real hit_rate_l1_real, hit_rate_l2_real, amat;
   integer response_count = 0;
   integer data_error_count = 0;
@@ -144,15 +143,13 @@ module testbench;
              memory_line_read_count, memory_line_write_count);
     
     if (l1_hit_count + l1_miss_count > 0) begin
-      hit_rate_l1 = (l1_hit_count * 100) / (l1_hit_count + l1_miss_count);
-      hit_rate_l1_real = hit_rate_l1 / 100.0;
-      $display("L1 Hit Rate: %.2f%%", hit_rate_l1_real * 100.0);
+      hit_rate_l1_real = (l1_hit_count * 100.0) / (l1_hit_count + l1_miss_count);
+      $display("L1 Hit Rate: %.2f%%", hit_rate_l1_real);
     end
     
     if (l1_miss_count > 0) begin
-      hit_rate_l2 = (l2_hit_count * 100) / l1_miss_count;
-      hit_rate_l2_real = hit_rate_l2 / 100.0;
-      $display("L2 Hit Rate: %.2f%%", hit_rate_l2_real * 100.0);
+      hit_rate_l2_real = (l2_hit_count * 100.0) / l1_miss_count;
+      $display("L2 Hit Rate: %.2f%%", hit_rate_l2_real);
     end
     
     amat = 1.0;
