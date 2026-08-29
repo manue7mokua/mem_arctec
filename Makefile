@@ -11,6 +11,7 @@ PYTHON = python3
 
 # Simulation output
 SIM_OUT = cache_sim
+GENERATED_TRACES = test/large_trace.txt test/simple_trace.txt
 
 # Source files - specify with full paths
 SRC_FILES = src/cpu.v src/cache_level.v src/l1_cache.v src/l2_cache.v src/main_memory.v src/top.v test/testbench.v
@@ -158,7 +159,7 @@ full_line_check: $(SRC_FILES)
 
 # Clean up
 clean:
-	rm -f $(SIM_OUT) output.vcd results_*.txt waveform_*.vcd
+	rm -f $(SIM_OUT) output.vcd results_*.txt waveform_*.vcd $(GENERATED_TRACES)
 
 # Run all configurations with the large trace file (10,000 addresses)
 large_compare: $(SRC_FILES)
