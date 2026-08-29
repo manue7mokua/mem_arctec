@@ -184,8 +184,7 @@ module testbench;
 
   initial begin
     #10000000;
-    $display("ERROR: Simulation timed out before the trace completed");
-    $finish;
+    $fatal(1, "Simulation timed out before the trace completed");
   end
 
   always @(posedge clk) begin
