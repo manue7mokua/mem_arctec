@@ -10,6 +10,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
+COMMAND_TIMEOUT_SECONDS = 30
 SOURCES = [
     "src/cpu.v",
     "src/cache_level.v",
@@ -61,6 +62,7 @@ def execute(command: list[str]) -> str:
         text=True,
         capture_output=True,
         check=False,
+        timeout=COMMAND_TIMEOUT_SECONDS,
     )
     if completed.returncode != 0:
         raise RuntimeError(
