@@ -1,6 +1,9 @@
 // Cache Configuration File
 // Contains parameters and macros for the two-level cache hierarchy
 
+`ifndef CACHE_CONFIG_V
+`define CACHE_CONFIG_V
+
 // Debug macro to print configuration
 `define DEBUG_CONFIG \
 initial begin \
@@ -100,3 +103,5 @@ end
              (addr >> (index_bits + offset_bits)), \
              ((addr >> offset_bits) & ((1 << index_bits) - 1)), \
              (addr & ((1 << offset_bits) - 1)))
+
+`endif
