@@ -6,6 +6,10 @@ cache_sim
 results_*.txt
 waveform_*.vcd
 
+# Generated traces
+test/large_trace.txt
+test/simple_trace.txt
+
 # Temporary files
 .cursor/
 __pycache__/
