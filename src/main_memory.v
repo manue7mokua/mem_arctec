@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 `include "src/cache_config.v"
 
 module main_memory(

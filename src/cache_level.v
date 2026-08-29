@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module cache_level #(
   parameter CACHE_SIZE = 256,
   parameter BLOCK_SIZE = 16,

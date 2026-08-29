@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module l2_cache #(
   parameter CACHE_SIZE = 512,
   parameter BLOCK_SIZE = 32,

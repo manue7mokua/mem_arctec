@@ -1,3 +1,5 @@
+`timescale 1ns / 1ps
+
 module l1_cache #(
   parameter CACHE_SIZE = 256,
   parameter BLOCK_SIZE = 16,
