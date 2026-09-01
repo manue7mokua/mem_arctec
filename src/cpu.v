@@ -45,10 +45,8 @@ module cpu(
     file = 0;
     if ($value$plusargs("TRACE=%s", trace_path)) begin
       file = $fopen(trace_path, "r");
-      if (file == 0) begin
-        $display("Error: Could not open trace file: %s", trace_path);
-        $finish;
-      end
+      if (file == 0)
+        $fatal(1, "Could not open trace file: %s", trace_path);
     end
 
     if (file == 0)
@@ -59,10 +57,8 @@ module cpu(
         file = $fopen("large_trace.txt", "r");
         if (file == 0) begin
           file = $fopen("test_trace.txt", "r");
-          if (file == 0) begin
-            $display("Error: Could not open a memory trace file");
-            $finish;
-          end
+          if (file == 0)
+            $fatal(1, "Could not open a memory trace file");
         end
       end
     end
