@@ -53,6 +53,24 @@ CONFIGS = {
         "-DREPLACEMENT_POLICY_L2=1",
     ],
 }
+REQUIRED_RESULT_FIELDS = {
+    "requests",
+    "responses",
+    "reads",
+    "writes",
+    "l1_hits",
+    "l1_misses",
+    "l2_hits",
+    "l2_misses",
+    "writebacks",
+    "cycles",
+    "stalls",
+    "data_errors",
+    "l1_fills",
+    "l2_fills",
+    "memory_reads",
+    "memory_writes",
+}
 
 
 def execute(command: list[str]) -> str:
@@ -85,10 +103,14 @@ def parse_result(output: str) -> dict[str, int]:
             f"Simulation emitted {len(matches)} RESULT lines; expected exactly one:\n"
             f"{output}"
         )
-    return {
+    result = {
         key: int(value)
         for key, value in re.findall(r"(\w+)=(\d+)", matches[0])
     }
+    missing_fields = REQUIRED_RESULT_FIELDS - result.keys()
+    if missing_fields:
+        raise AssertionError(f"RESULT line is missing fields: {sorted(missing_fields)}")
+    return result
 
 
 def assert_invariants(result: dict[str, int], expected_requests: int) -> None:
