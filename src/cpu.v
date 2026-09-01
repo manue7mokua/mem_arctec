@@ -112,6 +112,8 @@ module cpu(
     
     $fclose(file);
     trace_size = line_count;
+    if (trace_size == 0)
+      $fatal(1, "Trace file contains no valid requests");
     $display("Loaded total of %0d addresses from trace file", trace_size);
     
     // Print the first 20 addresses from the array to verify loading
