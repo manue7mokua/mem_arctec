@@ -16,6 +16,14 @@ def generate_trace(num_addresses=10000, output_file="test/large_trace.txt", seed
     if not output_path.is_absolute():
         output_path = ROOT / output_path
 
+    sequential_count = num_addresses * 10 // 100
+    locality_count = num_addresses * 20 // 100
+    stride_count = num_addresses * 15 // 100
+    loop_count = num_addresses * 25 // 100
+    mixed_count = num_addresses - (
+        sequential_count + locality_count + stride_count + loop_count
+    )
+
     with output_path.open("w", encoding="utf-8") as f:
         request_index = 0
 
@@ -30,7 +38,7 @@ def generate_trace(num_addresses=10000, output_file="test/large_trace.txt", seed
             request_index += 1
 
         # Sequential access pattern (10%)
-        for i in range(int(num_addresses * 0.1)):
+        for i in range(sequential_count):
             addr = (i * 16) % 2048  # 16-byte stride, wrap around at 2048
             emit(addr, 0.10)
         
@@ -46,14 +54,14 @@ def generate_trace(num_addresses=10000, output_file="test/large_trace.txt", seed
             (0x700, 0x7FF),    # Region 8: 1792-2047
         ]
         
-        for i in range(int(num_addresses * 0.2)):
+        for i in range(locality_count):
             region = rng.choice(locality_regions)
             addr = rng.randint(region[0], region[1])
             emit(addr, 0.25)
         
         # Strided access pattern (15%)
         strides = [16, 32, 64, 128]  # Different stride sizes
-        for i in range(int(num_addresses * 0.15)):
+        for i in range(stride_count):
             stride = rng.choice(strides)
             addr = (i * stride) % 2048
             emit(addr, 0.20)
@@ -61,14 +69,16 @@ def generate_trace(num_addresses=10000, output_file="test/large_trace.txt", seed
         # Loop pattern (25%)
         # Create several small loops that access the same few addresses repeatedly
         num_loops = 10
-        addresses_per_loop = int((num_addresses * 0.25) / num_loops)
-        
+
         for loop in range(num_loops):
             # Generate 3-5 random addresses for this loop
             loop_size = rng.randint(3, 5)
             loop_addresses = [rng.randint(0, 2047) for _ in range(loop_size)]
-            
+
             # Access these addresses repeatedly in the loop
+            addresses_per_loop = loop_count // num_loops
+            if loop < loop_count % num_loops:
+                addresses_per_loop += 1
             for i in range(addresses_per_loop):
                 addr = loop_addresses[i % loop_size]
                 emit(addr, 0.35)
@@ -76,7 +86,7 @@ def generate_trace(num_addresses=10000, output_file="test/large_trace.txt", seed
         # Mixed pattern with cache conflicts (30%)
         # Generate addresses that would map to the same cache sets
         l1_sets = 16  # For direct-mapped L1 cache with 16 sets
-        for i in range(int(num_addresses * 0.3)):
+        for i in range(mixed_count):
             set_index = rng.randint(0, l1_sets - 1)
             tag = rng.randint(0, 7)  # Random tag
             # Construct address: tag bits + index bits + offset bits (all 0)
