@@ -4,10 +4,10 @@
 all: direct_mapped
 
 # Compiler and flags
-IVERILOG = iverilog
+IVERILOG ?= iverilog
 IVERILOG_FLAGS = -g2012 -o
-VVP = vvp
-PYTHON = python3
+VVP ?= vvp
+PYTHON ?= python3
 
 # Simulation output
 SIM_OUT = cache_sim
