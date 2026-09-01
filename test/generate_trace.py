@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 import random
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 def random_op(rng, write_ratio=0.30):
     return "W" if rng.random() < write_ratio else "R"
@@ -8,8 +12,11 @@ def random_op(rng, write_ratio=0.30):
 def generate_trace(num_addresses=10000, output_file="test/large_trace.txt", seed=20260823):
     """Generate a trace file with memory access patterns for cache testing."""
     rng = random.Random(seed)
+    output_path = Path(output_file)
+    if not output_path.is_absolute():
+        output_path = ROOT / output_path
 
-    with open(output_file, "w") as f:
+    with output_path.open("w", encoding="utf-8") as f:
         request_index = 0
 
         def emit(addr, write_ratio):

@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+from pathlib import Path
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 def op_for_index(index, write_ratio=0.25):
     period = max(1, int(1 / write_ratio))
@@ -7,8 +11,11 @@ def op_for_index(index, write_ratio=0.25):
 
 def generate_simple_trace(num_addresses=10000, output_file="test/simple_trace.txt"):
     """Generate a very simple trace file for testing."""
-    
-    with open(output_file, "w") as f:
+    output_path = Path(output_file)
+    if not output_path.is_absolute():
+        output_path = ROOT / output_path
+
+    with output_path.open("w", encoding="utf-8") as f:
         # Simple sequential pattern
         for i in range(num_addresses):
             addr = i % 2048  # Wrap around at 2048
