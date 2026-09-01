@@ -128,6 +128,15 @@ def assert_invariants(result: dict[str, int], expected_requests: int) -> None:
     assert result["memory_writes"] <= result["writebacks"], result
 
 
+def count_trace_requests(trace_path: str) -> int:
+    lines = (ROOT / trace_path).read_text(encoding="utf-8").splitlines()
+    return sum(
+        1
+        for line in lines
+        if line.strip() and not line.lstrip().startswith("//")
+    )
+
+
 def main() -> None:
     rows: list[tuple[str, dict[str, int]]] = []
     with tempfile.TemporaryDirectory(prefix="mem_arctec_") as temp_dir:
@@ -143,7 +152,10 @@ def main() -> None:
                 ["vvp", simulation, "+TRACE=test/test_trace.txt", "+CHECK_DATA"]
             )
             standard = parse_result(standard_output)
-            assert_invariants(standard, expected_requests=85)
+            assert_invariants(
+                standard,
+                expected_requests=count_trace_requests("test/test_trace.txt"),
+            )
 
             data_output = execute(
                 [
@@ -153,7 +165,10 @@ def main() -> None:
                     "+CHECK_DATA",
                 ]
             )
-            assert_invariants(parse_result(data_output), expected_requests=20)
+            assert_invariants(
+                parse_result(data_output),
+                expected_requests=count_trace_requests("test/data_trace.txt"),
+            )
 
             offset_output = execute(
                 [
@@ -163,7 +178,10 @@ def main() -> None:
                     "+CHECK_DATA",
                 ]
             )
-            assert_invariants(parse_result(offset_output), expected_requests=14)
+            assert_invariants(
+                parse_result(offset_output),
+                expected_requests=count_trace_requests("test/offset_trace.txt"),
+            )
 
             full_line_output = execute(
                 [
@@ -173,7 +191,10 @@ def main() -> None:
                     "+CHECK_DATA",
                 ]
             )
-            assert_invariants(parse_result(full_line_output), expected_requests=28)
+            assert_invariants(
+                parse_result(full_line_output),
+                expected_requests=count_trace_requests("test/full_line_trace.txt"),
+            )
             rows.append((name, standard))
 
         latency_output = execute(
