@@ -79,12 +79,15 @@ def execute(command: list[str]) -> str:
 
 
 def parse_result(output: str) -> dict[str, int]:
-    match = re.search(r"^RESULT (.+)$", output, re.MULTILINE)
-    if not match:
-        raise AssertionError(f"Simulation did not emit a RESULT line:\n{output}")
+    matches = re.findall(r"^RESULT (.+)$", output, re.MULTILINE)
+    if len(matches) != 1:
+        raise AssertionError(
+            f"Simulation emitted {len(matches)} RESULT lines; expected exactly one:\n"
+            f"{output}"
+        )
     return {
         key: int(value)
-        for key, value in re.findall(r"(\w+)=(\d+)", match.group(1))
+        for key, value in re.findall(r"(\w+)=(\d+)", matches[0])
     }
 
 
