@@ -56,14 +56,20 @@ CONFIGS = {
 
 
 def execute(command: list[str]) -> str:
-    completed = subprocess.run(
-        command,
-        cwd=ROOT,
-        text=True,
-        capture_output=True,
-        check=False,
-        timeout=COMMAND_TIMEOUT_SECONDS,
-    )
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=ROOT,
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=COMMAND_TIMEOUT_SECONDS,
+        )
+    except subprocess.TimeoutExpired as error:
+        raise RuntimeError(
+            f"Command timed out after {COMMAND_TIMEOUT_SECONDS}s: "
+            f"{' '.join(command)}"
+        ) from error
     if completed.returncode != 0:
         raise RuntimeError(
             f"Command failed ({completed.returncode}): {' '.join(command)}\n"
