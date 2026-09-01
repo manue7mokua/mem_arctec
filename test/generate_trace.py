@@ -1,20 +1,20 @@
 #!/usr/bin/env python3
 import random
 
-def random_op(write_ratio=0.30):
-    return "W" if random.random() < write_ratio else "R"
+def random_op(rng, write_ratio=0.30):
+    return "W" if rng.random() < write_ratio else "R"
 
 
 def generate_trace(num_addresses=10000, output_file="test/large_trace.txt", seed=20260823):
     """Generate a trace file with memory access patterns for cache testing."""
-    random.seed(seed)
+    rng = random.Random(seed)
 
     with open(output_file, "w") as f:
         request_index = 0
 
         def emit(addr, write_ratio):
             nonlocal request_index
-            op = random_op(write_ratio)
+            op = random_op(rng, write_ratio)
             if op == "W":
                 data = (0xA5000000 ^ (request_index << 11) ^ addr) & 0xFFFFFFFF
                 f.write(f"W {addr:03X} {data:08X}\n")
@@ -40,14 +40,14 @@ def generate_trace(num_addresses=10000, output_file="test/large_trace.txt", seed
         ]
         
         for i in range(int(num_addresses * 0.2)):
-            region = random.choice(locality_regions)
-            addr = random.randint(region[0], region[1])
+            region = rng.choice(locality_regions)
+            addr = rng.randint(region[0], region[1])
             emit(addr, 0.25)
         
         # Strided access pattern (15%)
         strides = [16, 32, 64, 128]  # Different stride sizes
         for i in range(int(num_addresses * 0.15)):
-            stride = random.choice(strides)
+            stride = rng.choice(strides)
             addr = (i * stride) % 2048
             emit(addr, 0.20)
         
@@ -58,8 +58,8 @@ def generate_trace(num_addresses=10000, output_file="test/large_trace.txt", seed
         
         for loop in range(num_loops):
             # Generate 3-5 random addresses for this loop
-            loop_size = random.randint(3, 5)
-            loop_addresses = [random.randint(0, 2047) for _ in range(loop_size)]
+            loop_size = rng.randint(3, 5)
+            loop_addresses = [rng.randint(0, 2047) for _ in range(loop_size)]
             
             # Access these addresses repeatedly in the loop
             for i in range(addresses_per_loop):
@@ -70,8 +70,8 @@ def generate_trace(num_addresses=10000, output_file="test/large_trace.txt", seed
         # Generate addresses that would map to the same cache sets
         l1_sets = 16  # For direct-mapped L1 cache with 16 sets
         for i in range(int(num_addresses * 0.3)):
-            set_index = random.randint(0, l1_sets - 1)
-            tag = random.randint(0, 7)  # Random tag
+            set_index = rng.randint(0, l1_sets - 1)
+            tag = rng.randint(0, 7)  # Random tag
             # Construct address: tag bits + index bits + offset bits (all 0)
             addr = (tag << 8) | (set_index << 4)
             emit(addr, 0.45)
