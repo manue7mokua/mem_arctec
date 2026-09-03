@@ -113,6 +113,23 @@ gtkwave output.vcd
 
 Or upload the VCD file to [vc.drom.io](https://vc.drom.io/) for viewing in a browser.
 
+## Generating Traces
+
+Regenerate both default 10,000-request workloads with:
+
+```sh
+make generate_traces
+```
+
+The generators also support custom output paths and sizes:
+
+```sh
+python3 test/generate_trace.py --count 5000 --seed 42 --output test/custom_mixed.txt
+python3 test/generate_simple_trace.py --count 5000 --output test/custom_simple.txt
+```
+
+Generated default traces are ignored by Git and removed by `make clean`.
+
 ## Customizing Cache Configuration
 
 You can customize the cache configuration by modifying `src/cache_config.v` or by passing compiler defines:
