@@ -21,6 +21,12 @@ SIMULATION_TARGETS = direct_mapped two_way_lru two_way_random four_way_lru four_
 $(SIMULATION_TARGETS): src/cache_config.v
 
 # Different cache configurations
+help:
+	@echo "make regression       Run the complete verification matrix"
+	@echo "make generate_traces  Regenerate the large and sequential traces"
+	@echo "make compare          Compare all supported cache configurations"
+	@echo "make clean            Remove generated simulations and reports"
+
 direct_mapped: $(SRC_FILES)
 	@echo "Compiling Direct-Mapped configuration..."
 	$(IVERILOG) $(IVERILOG_FLAGS) $(SIM_OUT) $(INC_PATH) -DCACHE_MAPPING_L1=0 -DCACHE_MAPPING_L2=0 $(SRC_FILES)
@@ -237,4 +243,4 @@ large_compare: $(SRC_FILES)
 	@grep "AMAT" results_large_mixed.txt | tail -1
 	@echo "------------------------------------------------------------"
 
-.PHONY: all direct_mapped two_way_lru two_way_random four_way_lru four_way_random mixed compare view_waveform regression test generate_traces offset_check full_line_check clean large_trace large_compare simple_trace embedded_trace
+.PHONY: all help direct_mapped two_way_lru two_way_random four_way_lru four_way_random mixed compare view_waveform regression test generate_traces offset_check full_line_check clean large_trace large_compare simple_trace embedded_trace
