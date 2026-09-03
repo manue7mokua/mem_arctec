@@ -1,15 +1,21 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
-def op_for_index(index, write_ratio=0.25):
+
+def op_for_index(index: int, write_ratio: float = 0.25) -> str:
     period = max(1, int(1 / write_ratio))
     return "W" if index % period == 0 else "R"
 
 
-def generate_simple_trace(num_addresses=10000, output_file="test/simple_trace.txt"):
+def generate_simple_trace(
+    num_addresses: int = 10000,
+    output_file: str | Path = "test/simple_trace.txt",
+) -> None:
     """Generate a very simple trace file for testing."""
     output_path = Path(output_file)
     if not output_path.is_absolute():
