@@ -152,6 +152,10 @@ regression:
 
 test: regression
 
+generate_traces:
+	$(PYTHON) test/generate_trace.py
+	$(PYTHON) test/generate_simple_trace.py
+
 offset_check: $(SRC_FILES)
 	$(IVERILOG) $(IVERILOG_FLAGS) $(SIM_OUT) $(INC_PATH) -DCACHE_MAPPING_L1=0 -DCACHE_MAPPING_L2=0 $(SRC_FILES)
 	$(VVP) $(SIM_OUT) +TRACE=test/offset_trace.txt +CHECK_DATA
@@ -233,4 +237,4 @@ large_compare: $(SRC_FILES)
 	@grep "AMAT" results_large_mixed.txt | tail -1
 	@echo "------------------------------------------------------------"
 
-.PHONY: all direct_mapped two_way_lru two_way_random four_way_lru four_way_random mixed compare view_waveform regression test offset_check full_line_check clean large_trace large_compare simple_trace embedded_trace
+.PHONY: all direct_mapped two_way_lru two_way_random four_way_lru four_way_random mixed compare view_waveform regression test generate_traces offset_check full_line_check clean large_trace large_compare simple_trace embedded_trace
