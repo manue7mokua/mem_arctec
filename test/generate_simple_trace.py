@@ -23,6 +23,7 @@ def generate_simple_trace(
     output_path = Path(output_file)
     if not output_path.is_absolute():
         output_path = ROOT / output_path
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     with output_path.open("w", encoding="utf-8") as f:
         # Simple sequential pattern
