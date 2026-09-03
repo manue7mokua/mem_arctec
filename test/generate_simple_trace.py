@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 
 
@@ -38,5 +39,14 @@ def generate_simple_trace(
         
         print(f"Generated simple trace file with {num_addresses} read/write requests")
 
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Generate a sequential cache trace")
+    parser.add_argument("--count", type=int, default=10000)
+    parser.add_argument("--output", default="test/simple_trace.txt")
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    generate_simple_trace(10000, "test/simple_trace.txt") 
+    arguments = parse_args()
+    generate_simple_trace(arguments.count, arguments.output)
