@@ -16,6 +16,9 @@ GENERATED_TRACES = test/large_trace.txt test/simple_trace.txt
 # Source files - specify with full paths
 SRC_FILES = src/cpu.v src/cache_level.v src/l1_cache.v src/l2_cache.v src/main_memory.v src/top.v test/testbench.v
 INC_PATH = -I.
+SIMULATION_TARGETS = direct_mapped two_way_lru two_way_random four_way_lru four_way_random mixed large_trace simple_trace embedded_trace offset_check full_line_check
+
+$(SIMULATION_TARGETS): src/cache_config.v
 
 # Different cache configurations
 direct_mapped: $(SRC_FILES)
