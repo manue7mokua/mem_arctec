@@ -16,13 +16,14 @@ GENERATED_TRACES = test/large_trace.txt test/simple_trace.txt
 # Source files - specify with full paths
 SRC_FILES = src/cpu.v src/cache_level.v src/l1_cache.v src/l2_cache.v src/main_memory.v src/top.v test/testbench.v
 INC_PATH = -I.
-SIMULATION_TARGETS = direct_mapped two_way_lru two_way_random four_way_lru four_way_random mixed large_trace simple_trace embedded_trace offset_check full_line_check
+SIMULATION_TARGETS = direct_mapped two_way_lru two_way_random four_way_lru four_way_random mixed large_trace simple_trace embedded_trace compile_check offset_check full_line_check
 
 $(SIMULATION_TARGETS): src/cache_config.v
 
 # Different cache configurations
 help:
 	@echo "make regression       Run the complete verification matrix"
+	@echo "make compile_check    Compile without producing an executable"
 	@echo "make generate_traces  Regenerate the large and sequential traces"
 	@echo "make compare          Compare all supported cache configurations"
 	@echo "make clean            Remove generated simulations and reports"
@@ -158,6 +159,9 @@ regression:
 
 test: regression
 
+compile_check: $(SRC_FILES)
+	$(IVERILOG) -g2012 -t null $(INC_PATH) $(SRC_FILES)
+
 generate_traces:
 	$(PYTHON) test/generate_trace.py
 	$(PYTHON) test/generate_simple_trace.py
@@ -243,4 +247,4 @@ large_compare: $(SRC_FILES)
 	@grep "AMAT" results_large_mixed.txt | tail -1
 	@echo "------------------------------------------------------------"
 
-.PHONY: all help direct_mapped two_way_lru two_way_random four_way_lru four_way_random mixed compare view_waveform regression test generate_traces offset_check full_line_check clean large_trace large_compare simple_trace embedded_trace
+.PHONY: all help direct_mapped two_way_lru two_way_random four_way_lru four_way_random mixed compare view_waveform regression test compile_check generate_traces offset_check full_line_check clean large_trace large_compare simple_trace embedded_trace
