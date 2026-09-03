@@ -69,6 +69,14 @@ This project implements a cycle-accurate Verilog simulation of a two-level memor
   - `latency_trace.txt`: Cold-miss/warm-hit latency regression
   - `run_regression.py`: Compiles and verifies every supported configuration
 
+## Prerequisites
+
+- Icarus Verilog (`iverilog` and `vvp`)
+- Python 3.10 or newer
+- Make
+
+Run `make compile_check` for a quick toolchain and syntax check, or `make help` to list the primary workflows.
+
 ## How to Run
 
 1. Compile the Verilog files:
