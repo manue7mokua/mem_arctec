@@ -25,6 +25,7 @@ def generate_trace(
     output_path = Path(output_file)
     if not output_path.is_absolute():
         output_path = ROOT / output_path
+    output_path.parent.mkdir(parents=True, exist_ok=True)
 
     sequential_count = num_addresses * 10 // 100
     locality_count = num_addresses * 20 // 100
