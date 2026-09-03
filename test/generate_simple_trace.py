@@ -17,6 +17,9 @@ def generate_simple_trace(
     output_file: str | Path = "test/simple_trace.txt",
 ) -> None:
     """Generate a very simple trace file for testing."""
+    if num_addresses <= 0:
+        raise ValueError("num_addresses must be greater than zero")
+
     output_path = Path(output_file)
     if not output_path.is_absolute():
         output_path = ROOT / output_path
