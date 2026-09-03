@@ -152,6 +152,15 @@ def count_trace_requests(trace_path: str) -> int:
 
 def main() -> None:
     rows: list[tuple[str, dict[str, int]]] = []
+    expected_requests = {
+        trace_path: count_trace_requests(trace_path)
+        for trace_path in (
+            "test/test_trace.txt",
+            "test/data_trace.txt",
+            "test/offset_trace.txt",
+            "test/full_line_trace.txt",
+        )
+    }
     with tempfile.TemporaryDirectory(prefix="mem_arctec_") as temp_dir:
         for name, defines in CONFIGS.items():
             simulation = str(Path(temp_dir) / name)
@@ -167,7 +176,7 @@ def main() -> None:
             standard = parse_result(standard_output)
             assert_invariants(
                 standard,
-                expected_requests=count_trace_requests("test/test_trace.txt"),
+                expected_requests=expected_requests["test/test_trace.txt"],
             )
 
             data_output = execute(
@@ -180,7 +189,7 @@ def main() -> None:
             )
             assert_invariants(
                 parse_result(data_output),
-                expected_requests=count_trace_requests("test/data_trace.txt"),
+                expected_requests=expected_requests["test/data_trace.txt"],
             )
 
             offset_output = execute(
@@ -193,7 +202,7 @@ def main() -> None:
             )
             assert_invariants(
                 parse_result(offset_output),
-                expected_requests=count_trace_requests("test/offset_trace.txt"),
+                expected_requests=expected_requests["test/offset_trace.txt"],
             )
 
             full_line_output = execute(
@@ -206,7 +215,7 @@ def main() -> None:
             )
             assert_invariants(
                 parse_result(full_line_output),
-                expected_requests=count_trace_requests("test/full_line_trace.txt"),
+                expected_requests=expected_requests["test/full_line_trace.txt"],
             )
             rows.append((name, standard))
 
