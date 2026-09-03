@@ -70,6 +70,19 @@ module cache_level #(
   reg invalid_found;
 
   initial begin
+    if (CACHE_SIZE % BLOCK_SIZE != 0)
+      $fatal(1, "CACHE_SIZE must be divisible by BLOCK_SIZE");
+    if (BLOCK_SIZE % (DATA_WIDTH / 8) != 0)
+      $fatal(1, "BLOCK_SIZE must contain complete data words");
+    if (LINE_WIDTH != BLOCK_SIZE * 8)
+      $fatal(1, "LINE_WIDTH must match BLOCK_SIZE");
+    if (MAPPING_TYPE < `DIRECT_MAPPED || MAPPING_TYPE > `FOUR_WAY)
+      $fatal(1, "Unsupported cache mapping type: %0d", MAPPING_TYPE);
+    if (REPLACEMENT_POLICY < `LRU || REPLACEMENT_POLICY > `RANDOM)
+      $fatal(1, "Unsupported replacement policy: %0d", REPLACEMENT_POLICY);
+    if (NUM_SETS < 1)
+      $fatal(1, "Cache configuration must provide at least one set");
+
     use_clock = 0;
     random_state = RANDOM_SEED;
     eviction_valid = 0;
