@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 import re
 import subprocess
 import tempfile
@@ -103,10 +104,13 @@ def parse_result(output: str) -> dict[str, int]:
             f"Simulation emitted {len(matches)} RESULT lines; expected exactly one:\n"
             f"{output}"
         )
-    result = {
-        key: int(value)
-        for key, value in re.findall(r"(\w+)=(\d+)", matches[0])
-    }
+    fields = re.findall(r"(\w+)=(\d+)", matches[0])
+    duplicate_fields = sorted(
+        key for key, count in Counter(key for key, _ in fields).items() if count > 1
+    )
+    if duplicate_fields:
+        raise AssertionError(f"RESULT line repeats fields: {duplicate_fields}")
+    result = {key: int(value) for key, value in fields}
     missing_fields = REQUIRED_RESULT_FIELDS - result.keys()
     if missing_fields:
         raise AssertionError(f"RESULT line is missing fields: {sorted(missing_fields)}")
