@@ -1,15 +1,22 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
 import random
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 
-def random_op(rng, write_ratio=0.30):
+
+def random_op(rng: random.Random, write_ratio: float = 0.30) -> str:
     return "W" if rng.random() < write_ratio else "R"
 
 
-def generate_trace(num_addresses=10000, output_file="test/large_trace.txt", seed=20260823):
+def generate_trace(
+    num_addresses: int = 10000,
+    output_file: str | Path = "test/large_trace.txt",
+    seed: int = 20260823,
+) -> None:
     """Generate a trace file with memory access patterns for cache testing."""
     rng = random.Random(seed)
     output_path = Path(output_file)
@@ -27,7 +34,7 @@ def generate_trace(num_addresses=10000, output_file="test/large_trace.txt", seed
     with output_path.open("w", encoding="utf-8") as f:
         request_index = 0
 
-        def emit(addr, write_ratio):
+        def emit(addr: int, write_ratio: float) -> None:
             nonlocal request_index
             op = random_op(rng, write_ratio)
             if op == "W":
