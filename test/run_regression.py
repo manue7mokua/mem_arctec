@@ -121,18 +121,32 @@ def parse_result(output: str) -> dict[str, int]:
 
 
 def assert_invariants(result: dict[str, int], expected_requests: int) -> None:
-    assert result["requests"] == expected_requests, result
-    assert result["responses"] == expected_requests, result
-    assert result["reads"] + result["writes"] == expected_requests, result
-    assert result["l1_hits"] + result["l1_misses"] == expected_requests, result
-    assert result["l2_hits"] + result["l2_misses"] == result["l1_misses"], result
-    assert result["cycles"] >= expected_requests, result
-    assert result["stalls"] == result["cycles"] - expected_requests, result
-    assert result["data_errors"] == 0, result
-    assert result["l1_fills"] == result["l1_misses"], result
-    assert result["l2_fills"] == result["memory_reads"], result
-    assert result["memory_reads"] >= result["l2_misses"], result
-    assert result["memory_writes"] <= result["writebacks"], result
+    checks = (
+        (result["requests"] == expected_requests, "request count"),
+        (result["responses"] == expected_requests, "response count"),
+        (result["reads"] + result["writes"] == expected_requests, "request mix"),
+        (
+            result["l1_hits"] + result["l1_misses"] == expected_requests,
+            "L1 accounting",
+        ),
+        (
+            result["l2_hits"] + result["l2_misses"] == result["l1_misses"],
+            "L2 accounting",
+        ),
+        (result["cycles"] >= expected_requests, "cycle count"),
+        (
+            result["stalls"] == result["cycles"] - expected_requests,
+            "stall accounting",
+        ),
+        (result["data_errors"] == 0, "data scoreboard"),
+        (result["l1_fills"] == result["l1_misses"], "L1 fill accounting"),
+        (result["l2_fills"] == result["memory_reads"], "L2 fill accounting"),
+        (result["memory_reads"] >= result["l2_misses"], "memory reads"),
+        (result["memory_writes"] <= result["writebacks"], "memory writes"),
+    )
+    for condition, description in checks:
+        if not condition:
+            raise AssertionError(f"Failed {description} invariant: {result}")
 
 
 def count_trace_requests(trace_path: str) -> int:
@@ -232,7 +246,8 @@ def main() -> None:
             int(value)
             for value in re.findall(r"REQUEST_COMPLETE .* cycles=(\d+)", latency_output)
         ]
-        assert observed_cycles == [115, 1], observed_cycles
+        if observed_cycles != [115, 1]:
+            raise AssertionError(f"Unexpected request latencies: {observed_cycles}")
 
     print(
         "configuration  requests  l1_hits  l2_hits  writebacks  "
