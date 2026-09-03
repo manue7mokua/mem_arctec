@@ -18,6 +18,9 @@ def generate_trace(
     seed: int = 20260823,
 ) -> None:
     """Generate a trace file with memory access patterns for cache testing."""
+    if num_addresses <= 0:
+        raise ValueError("num_addresses must be greater than zero")
+
     rng = random.Random(seed)
     output_path = Path(output_file)
     if not output_path.is_absolute():
