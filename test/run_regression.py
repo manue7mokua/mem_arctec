@@ -72,6 +72,9 @@ REQUIRED_RESULT_FIELDS = {
     "memory_reads",
     "memory_writes",
 }
+TRACE_REQUEST_PATTERN = re.compile(
+    r"^(?:[Rr]\s+[0-9a-fA-F]+|[Ww]\s+[0-9a-fA-F]+(?:\s+[0-9a-fA-F]+)?|[0-9a-fA-F]+)$"
+)
 
 
 def execute(command: list[str]) -> str:
@@ -134,11 +137,17 @@ def assert_invariants(result: dict[str, int], expected_requests: int) -> None:
 
 def count_trace_requests(trace_path: str) -> int:
     lines = (ROOT / trace_path).read_text(encoding="utf-8").splitlines()
-    return sum(
-        1
-        for line in lines
-        if line.strip() and not line.lstrip().startswith("//")
-    )
+    request_count = 0
+    for line_number, line in enumerate(lines, start=1):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("//"):
+            continue
+        if not TRACE_REQUEST_PATTERN.fullmatch(stripped):
+            raise AssertionError(
+                f"Invalid trace request at {trace_path}:{line_number}: {stripped}"
+            )
+        request_count += 1
+    return request_count
 
 
 def main() -> None:
