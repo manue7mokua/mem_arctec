@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import argparse
 import random
 from pathlib import Path
 
@@ -104,6 +105,16 @@ def generate_trace(
             addr = (tag << 8) | (set_index << 4)
             emit(addr, 0.45)
 
+
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Generate a mixed cache trace")
+    parser.add_argument("--count", type=int, default=10000)
+    parser.add_argument("--output", default="test/large_trace.txt")
+    parser.add_argument("--seed", type=int, default=20260823)
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
-    generate_trace(10000, "test/large_trace.txt")
-    print("Generated trace file with 10,000 read/write requests") 
+    arguments = parse_args()
+    generate_trace(arguments.count, arguments.output, arguments.seed)
+    print(f"Generated mixed trace with {arguments.count} read/write requests")
